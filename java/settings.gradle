@@ -1,0 +1,5 @@
+rootProject.name = 'YogurtCloud'
+
+include "shared"
+include "server"
+include "client"
