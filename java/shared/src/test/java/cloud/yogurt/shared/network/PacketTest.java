@@ -14,6 +14,7 @@ public class PacketTest {
 
     @Before
     public void preparePacket() {
+        System.out.println("Create empty packet for testing.");
         packet = new Packet();
     }
 
@@ -22,10 +23,14 @@ public class PacketTest {
         Packet decodedPacket = new Packet();
         decodedPacket.decodeDatagram(packet.construct());
 
+        System.out.println("Compare constructed packet with original one.");
+
         assertEquals(packet.callId, decodedPacket.callId);
         assertEquals(packet.eomFlag, decodedPacket.eomFlag);
         assertEquals(packet.resFlag, decodedPacket.resFlag);
         assertEquals(packet.ackFlag, decodedPacket.ackFlag);
+
+        System.out.println("All tests passed.\n\n");
     }
 
     @Test

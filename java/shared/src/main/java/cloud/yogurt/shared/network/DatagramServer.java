@@ -1,5 +1,6 @@
 package cloud.yogurt.shared.network;
 
+import cloud.yogurt.shared.logging.Logger;
 import cloud.yogurt.shared.message.SendingPacket;
 import cloud.yogurt.shared.message.SendingPacketHandler;
 
@@ -12,7 +13,15 @@ import java.util.List;
 
 import static cloud.yogurt.shared.sharedconfig.SharedConfig.*;
 
+/**
+ * The default sender and receiver for Yogurt packets.
+ *
+ * Currently the implementation for `sendPacket` is asynchronized, i.e.
+ * packet may not be sent after function returns.
+ */
 public abstract class DatagramServer extends Thread implements SendingPacketHandler {
+
+    private static Logger log = Logger.getLogger(DatagramServer.class.getName());
 
     private boolean isStopped = false;
 
@@ -27,10 +36,20 @@ public abstract class DatagramServer extends Thread implements SendingPacketHand
 
     protected abstract PacketHandler getPacketHandler();
 
+    /**
+     * Default constructor without specific port.
+     *
+     * This constructor is typical used by client, since it does not need to listen on a specific port.
+     */
     public DatagramServer() {
         this.port = 0;
     }
 
+    /**
+     * The constructor with a specific port.
+     *
+     * @param port Which port would the server be listening on.
+     */
     public DatagramServer(int port) {
         this.port = port;
     }
@@ -47,7 +66,7 @@ public abstract class DatagramServer extends Thread implements SendingPacketHand
         } catch (SocketException e) {
             e.printStackTrace();
         }
-        System.out.println("Socket server is listening at port " + socket.getLocalPort());
+        log.info("Socket server is listening at port " + socket.getLocalPort());
         while (!isStopped) {
             waitForDatagram();
         }
@@ -61,7 +80,7 @@ public abstract class DatagramServer extends Thread implements SendingPacketHand
     }
 
     private void waitForDatagram() {
-        System.out.println("Waiting for incoming datagram.");
+        log.debug("Waiting for incoming datagram.");
 
         try {
             socket.receive(receiveDatagram);
@@ -70,7 +89,7 @@ public abstract class DatagramServer extends Thread implements SendingPacketHand
             getPacketHandler().handlePacket(packet);
         }
         catch (SocketException sc) {
-            System.out.println("Socket server is closed.");
+            log.error("Socket server is closed.");
         }
         catch (IOException e) {
             e.printStackTrace();
@@ -97,7 +116,6 @@ public abstract class DatagramServer extends Thread implements SendingPacketHand
 
     @Override
     public void removePacketIfNotSent(Packet packet) {
-
     }
 
 }

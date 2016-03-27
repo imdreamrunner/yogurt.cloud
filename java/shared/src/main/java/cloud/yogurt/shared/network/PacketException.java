@@ -1,7 +1,9 @@
 package cloud.yogurt.shared.network;
 
-public class PacketException extends Exception {
+import cloud.yogurt.shared.common.YogurtException;
+
+public class PacketException extends YogurtException {
     public PacketException(String s) {
-        super(s);
+        super("PacketException: " + s);
     }
 }
