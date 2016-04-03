@@ -1,4 +1,6 @@
 package cloud.yogurt.shared.message;
 
-public interface MessageLoadDataHandler {
+import java.io.InputStream;
+
+public abstract class MessageLoadDataHandler extends InputStream {
 }
