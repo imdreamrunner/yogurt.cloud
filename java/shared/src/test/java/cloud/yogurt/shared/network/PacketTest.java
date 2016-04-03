@@ -30,6 +30,12 @@ public class PacketTest {
         assertEquals(packet.resFlag, decodedPacket.resFlag);
         assertEquals(packet.ackFlag, decodedPacket.ackFlag);
 
+        assertEquals(packet.id, decodedPacket.id);
+        assertEquals(packet.ackPacket, decodedPacket.ackPacket);
+
+        assertEquals(packet.content.length, decodedPacket.content.length);
+        assertArrayEquals(packet.content, decodedPacket.content);
+
         System.out.println("All tests passed.\n\n");
     }
 
@@ -39,6 +45,11 @@ public class PacketTest {
         packet.eomFlag = true;
         packet.resFlag = false;
         packet.ackFlag = false;
+
+        packet.id = 123;
+        packet.ackPacket = 456;
+
+        packet.content = new byte[]{1, 2, 3, 4, 5};
     }
 
     @Test
@@ -47,13 +58,23 @@ public class PacketTest {
         packet.eomFlag = false;
         packet.resFlag = true;
         packet.ackFlag = false;
+
+        packet.id = 1234;
+        packet.ackPacket = 5678;
+
+        packet.content = new byte[]{1, 2, 3, 4, 5, 6};
     }
 
     @Test
     public void testPacketConstruct3() {
-        packet.callId = 7;
+        packet.callId = 9;
         packet.eomFlag = false;
         packet.resFlag = false;
         packet.ackFlag = true;
+
+        packet.id = 0;
+        packet.ackPacket = 1;
+
+        packet.content = new byte[]{1, 2, 3, 4, 5, 7};
     }
 }

@@ -6,10 +6,12 @@ import java.nio.ByteOrder;
 import static cloud.yogurt.shared.sharedconfig.SharedConfig.*;
 
 public class Packet {
-    public int id;
-    public int ackPacket;
+    static int PACKET_HEADER_SIZE = 4 * 3;
 
-    public int callId;
+    public long id;  // 4 bytes
+    public long ackPacket;  // 4 bytes
+
+    public int callId;  // 2 bytes
     public boolean ackFlag;
     public boolean resFlag;
     public boolean eomFlag;
@@ -17,7 +19,6 @@ public class Packet {
     public byte[] content;
 
     public byte[] construct() throws PacketException {
-        int PACKET_HEADER_SIZE = 32 * 3;
         if (content == null) content = new byte[0];
         if (PACKET_HEADER_SIZE + content.length > MAX_DATAGRAM) {
             throw new PacketException("Packet size too large");
@@ -33,14 +34,19 @@ public class Packet {
         int bitFlagsInts = constructIntegerWithFlags(bitFlags);
         System.arraycopy(getByteFromInteger(bitFlagsInts, 2), 0, datagram, 2, 2);
 
+        System.arraycopy(getByteFromInteger(id, 4), 0, datagram, 4, 4);
+        System.arraycopy(getByteFromInteger(ackPacket, 4), 0, datagram, 8, 4);
+
+        System.arraycopy(content, 0, datagram, 12, content.length);
+
         return datagram;
     }
 
     private int constructIntegerWithFlags(boolean[] flags) {
         int result = 0;
-        for (int i = 0; i < flags.length; i++) {
+        for (boolean flag : flags) {
             result <<= 1;
-            result += flags[i] ? 1 : 0;
+            result += flag ? 1 : 0;
         }
         return result;
     }
@@ -54,9 +60,9 @@ public class Packet {
         return flags;
     }
 
-    private byte[] getByteFromInteger(int number, int length) throws PacketException {
-        if (number > 1 << (length * 8)) {
-            throw new PacketException("Number out of bound");
+    private byte[] getByteFromInteger(long number, int length) throws PacketException {
+        if (number > ((long)1 << (length * 8))) {
+            throw new PacketException("Number out of bound. Maximum " + (1 << (length * 8)) + " found " + number);
         }
         byte[] result = new byte[length];
         for (int i = length - 1; i >= 0; i--) {
@@ -73,6 +79,13 @@ public class Packet {
         this.resFlag = flags[0];
         this.ackFlag = flags[1];
         this.eomFlag = flags[2];
+
+        this.id = readIntegerFromByte(bytes, 4, 4);
+        this.ackPacket = readIntegerFromByte(bytes, 8, 4);
+
+        int contentLength = bytes.length - PACKET_HEADER_SIZE;
+        content = new byte[contentLength];
+        System.arraycopy(bytes, 12, content, 0, contentLength);
     }
 
     private int readIntegerFromByte(byte[] bytes, int start, int length) {
