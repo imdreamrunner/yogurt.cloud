@@ -24,7 +24,7 @@ public class FileResolverTest {
             assertTrue(result);
         }
         File textFile = new File(serverBasePath + "/test.txt");
-        PrintWriter writer = new PrintWriter(textFile, String.valueOf(StandardCharsets.UTF_8));
+        PrintWriter writer = new PrintWriter(textFile, String.valueOf(SharedConfig.HEADER_CHARSET));
         writer.println(LINE_1);
         writer.println(LINE_2);
         writer.close();
@@ -38,6 +38,6 @@ public class FileResolverTest {
         int fileSize = fileResolver.read(buffer);
         byte[] stringInBytes = new byte[fileSize];
         System.arraycopy(buffer, 0, stringInBytes, 0, fileSize);
-        assertEquals(new String(stringInBytes, StandardCharsets.UTF_8), LINE_1 + "\n" + LINE_2 + "\n");
+        assertEquals(new String(stringInBytes, SharedConfig.HEADER_CHARSET), LINE_1 + "\n" + LINE_2 + "\n");
     }
 }

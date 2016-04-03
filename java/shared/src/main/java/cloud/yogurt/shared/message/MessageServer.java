@@ -11,12 +11,26 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MessageServer extends DatagramServer {
-    Logger log = Logger.getLogger(MessageServer.class.getName());
+public abstract class MessageServer extends DatagramServer {
+    private MessagePacketHandler messagePacketHandler = null;
+    private static Logger log = Logger.getLogger(MessageServer.class.getName());
+
+    public abstract MessageHandler getMessageHandler();
+
+    public MessageServer() {
+        super();
+    }
+
+    public MessageServer(int port) {
+        super(port);
+    }
 
     @Override
     protected PacketHandler getPacketHandler() {
-        return null;
+        if (messagePacketHandler == null) {
+            messagePacketHandler = new MessagePacketHandler(this);
+        }
+        return messagePacketHandler;
     }
 
     public void sendMessage(SendingMessage message) throws IOException, PacketException {
@@ -29,7 +43,7 @@ public class MessageServer extends DatagramServer {
             packet.endPoint = message.getTarget();
             byte[] buffer = new byte[SharedConfig.MAX_PACKET_PAYLOAD];
             int bytesRead = loader.read(buffer);
-            if (bytesRead == 0) {
+            if (bytesRead <= 0) {
                 break;
             } else {
                 log.debug("Read " + bytesRead + " bytes from data loader.");
@@ -42,4 +56,5 @@ public class MessageServer extends DatagramServer {
         for (Packet packet : packets) sendPacket(packet);
         log.debug("Finish sending message.");
     }
+
 }

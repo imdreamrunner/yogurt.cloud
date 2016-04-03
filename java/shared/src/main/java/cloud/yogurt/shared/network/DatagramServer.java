@@ -83,14 +83,22 @@ public abstract class DatagramServer extends Thread implements PacketSender {
 
         try {
             socket.receive(receiveDatagram);
+            byte[] buffer = new byte[receiveDatagram.getLength()];
+            System.arraycopy(receiveDatagram.getData(), 0, buffer, 0, buffer.length);
+            log.debug("Receive datagram size of " + buffer.length);
             Packet packet = new Packet();
-            packet.decodeDatagram(receiveDatagram.getData());
+            packet.decodeDatagram(buffer);
+            packet.endPoint = new EndPoint();
+            packet.endPoint.address = receiveDatagram.getAddress();
+            packet.endPoint.port = receiveDatagram.getPort();
             getPacketHandler().handlePacket(packet);
         }
         catch (SocketException sc) {
             log.error("Socket server is closed.");
         }
         catch (IOException e) {
+            e.printStackTrace();
+        } catch (PacketException e) {
             e.printStackTrace();
         }
     }

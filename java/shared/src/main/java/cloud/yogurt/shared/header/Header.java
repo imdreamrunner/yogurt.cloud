@@ -17,6 +17,19 @@ public class Header {
         this.headerRows = headerRows;
     }
 
+    public String[] getParams() {
+        return this.params;
+    }
+
+    public HeaderValue getValue(String key) {
+        for (HeaderRow row : headerRows) {
+            if (row.key.equals(key)) {
+                return row.value;
+            }
+        }
+        return null;
+    }
+
     @Override
     public String toString() {
         StringBuffer headerString = new StringBuffer(SharedConfig.CURRENT_API_VERSION);
@@ -29,8 +42,7 @@ public class Header {
             headerString.append(row.toString());
             headerString.append('\n');
         }
-
-        log.debug("Constructed header: \n" + headerString.toString());
+        headerString.append('\n');
 
         return headerString.toString();
     }

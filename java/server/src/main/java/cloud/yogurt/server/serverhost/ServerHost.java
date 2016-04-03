@@ -8,7 +8,6 @@ public class ServerHost {
 
     private static ServerHost instance;
 
-    private ServerHostPacketHandler packetHandler;
     private ServerHostThread hostThread;
 
     public static ServerHost getInstance() {
@@ -20,9 +19,7 @@ public class ServerHost {
 
     public void run() {
         log.info("Server is being started.");
-        packetHandler = new ServerHostPacketHandler();
         hostThread = new ServerHostThread();
-        hostThread.packetHandler = packetHandler;
         hostThread.start();
     }
 

@@ -13,13 +13,9 @@ public class FileResolver extends MessageDataLoader {
     private File file;
     private FileInputStream fileInputStream;
 
-    public FileResolver(String path) {
+    public FileResolver(String path) throws FileNotFoundException {
         file = new File(SharedConfig.SERVER_BASE_PATH + "/" + path);
-        try {
-            fileInputStream = new FileInputStream(file);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
+        fileInputStream = new FileInputStream(file);
     }
 
     @Override
