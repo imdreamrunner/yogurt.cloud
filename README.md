@@ -18,7 +18,8 @@ Every service call contain 3 messages.
 All messages have a shared format as below.
 
 * Call ID: A unique 2 byte ID for a service call.
-* EOM: Indicating if the message is the last packet for a message.
+* EOM: Indicating if the packet is the last packet for a message.
+* EOC: Indicating if the message is the last message of a call.
 * Packet ID: A 4 byte integer representing the fragment ID for current message.
 * ACK Packet ID: Next packet expected from sender, for replying message only.
 * Packet Body: Data in the packet.
@@ -26,9 +27,9 @@ All messages have a shared format as below.
 		    0                   1                   2                   3   
 		    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 
 		   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-		   |                               |E|                             |
-		   |            Call ID            |O|          Reserved           |
-		   |                               |M|                             |
+		   |                               |E|E|                           |
+		   |            Call ID            |O|O|         Reserved          |
+		   |                               |M|C|                           |
 		   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 		   |                           Packet ID                           |
 		   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -60,6 +61,8 @@ For examples:
 	YC1 READ /path/to/file.txt
 	YC1 INSERT /path/to/file.txt
 	YC1 MONITOR /path/to/file.txt
+	YC1 DELETE /path/to/file.txt
+	YC1 CHECK /path/to/file.txt
 	
 	# For Response
 	YC1 STATUS SUCCESS

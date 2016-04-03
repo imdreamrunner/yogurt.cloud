@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -31,6 +33,9 @@ public abstract class DatagramServer extends Thread implements PacketSender {
     private DatagramPacket receiveDatagram = new DatagramPacket(receiveBuffer, MAX_DATAGRAM);
 
     private List<Packet> packetsToSend = new LinkedList<>();
+
+    private Map<EndPointCall, Long> sendId = new HashMap<>();
+    private Map<EndPointCall, Long> ackId = new HashMap<>();
 
     protected abstract PacketHandler getPacketHandler();
 
@@ -85,28 +90,76 @@ public abstract class DatagramServer extends Thread implements PacketSender {
             socket.receive(receiveDatagram);
             byte[] buffer = new byte[receiveDatagram.getLength()];
             System.arraycopy(receiveDatagram.getData(), 0, buffer, 0, buffer.length);
-            log.debug("Receive datagram size of " + buffer.length);
             Packet packet = new Packet();
             packet.decodeDatagram(buffer);
             packet.endPoint = new EndPoint();
             packet.endPoint.address = receiveDatagram.getAddress();
             packet.endPoint.port = receiveDatagram.getPort();
-            getPacketHandler().handlePacket(packet);
+
+            log.debug("Receive datagram size of " + buffer.length + " from " +
+                    packet.endPoint.address + ":" + packet.endPoint.port + "," +
+                    " Call=" + packet.callId +
+                    " Packet=" + packet.id +
+                    " ACK=" + packet.ackPacket);
+
+            if (setAckId(packet.endPoint, packet.callId, packet.id)) {
+                getPacketHandler().handlePacket(packet);
+            }
+
         }
         catch (SocketException sc) {
             log.error("Socket server is closed.");
         }
-        catch (IOException e) {
-            e.printStackTrace();
-        } catch (PacketException e) {
+        catch (IOException | PacketException e) {
             e.printStackTrace();
         }
+
+    }
+
+    private long getSendId(EndPoint endPoint, int call) {
+        EndPointCall endPointCall = new EndPointCall(endPoint, call);
+        if (sendId.get(endPointCall) != null) {
+            sendId.put(endPointCall, sendId.get(endPointCall) + 1);
+        }
+        else {
+            sendId.put(endPointCall, 1l);
+        }
+        return sendId.get(endPointCall) - 1;
+    }
+
+    private long getAckId(EndPoint endPoint, int call ) {
+        EndPointCall endPointCall = new EndPointCall(endPoint, call);
+        if (ackId.get(endPointCall) != null) {
+            return ackId.get(endPointCall);
+        }
+        return 0;
+    }
+
+    /**
+     * Set ACK
+     * @param endPoint
+     * @param call
+     * @param id
+     * @return true only if is receiving next frame.
+     */
+    private boolean setAckId(EndPoint endPoint, int call, long id) {
+        if (getAckId(endPoint, call) == id - 1) {
+            EndPointCall endPointCall = new EndPointCall(endPoint, call);
+            ackId.put(endPointCall, id);
+            return true;
+        }
+        return false;
     }
 
     public void sendPacket(Packet packet) throws PacketException {
+        packet.id = getSendId(packet.endPoint, packet.callId);
+        packet.ackPacket = getAckId(packet.endPoint, packet.callId);
         byte[] constructedPacket = packet.construct();
         log.info("Send packet size " + constructedPacket.length + " to " +
-                packet.endPoint.address + ":" + packet.endPoint.port + ".");
+                packet.endPoint.address + ":" + packet.endPoint.port + "," +
+                " Call=" + packet.callId +
+                " Packet=" + packet.id +
+                " ACK=" + packet.ackPacket);
         DatagramPacket sendingDatagram = new DatagramPacket(constructedPacket, constructedPacket.length);
         sendingDatagram.setAddress(packet.endPoint.address);
         sendingDatagram.setPort(packet.endPoint.port);
