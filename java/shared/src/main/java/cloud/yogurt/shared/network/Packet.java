@@ -1,5 +1,6 @@
 package cloud.yogurt.shared.network;
 
+import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
@@ -7,6 +8,8 @@ import static cloud.yogurt.shared.sharedconfig.SharedConfig.*;
 
 public class Packet {
     static int PACKET_HEADER_SIZE = 4 * 3;
+
+    public EndPoint endPoint;
 
     public long id;  // 4 bytes
     public long ackPacket;  // 4 bytes

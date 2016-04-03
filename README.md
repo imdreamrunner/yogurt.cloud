@@ -18,8 +18,6 @@ Every service call contain 3 messages.
 All messages have a shared format as below.
 
 * Call ID: A unique 2 byte ID for a service call.
-* RES Flag: Indicating if the message is a response.
-* ACK Flag: Indicating if the message is an ACK for response.
 * EOM: Indicating if the message is the last packet for a message.
 * Packet ID: A 4 byte integer representing the fragment ID for current message.
 * ACK Packet ID: Next packet expected from sender, for replying message only.
@@ -28,9 +26,9 @@ All messages have a shared format as below.
 		    0                   1                   2                   3   
 		    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 
 		   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-		   |                               |R|A|E|                         |
-		   |            Call ID            |E|C|O|        Reserved         |
-		   |                               |S|K|M|                         |
+		   |                               |E|                             |
+		   |            Call ID            |O|          Reserved           |
+		   |                               |M|                             |
 		   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 		   |                           Packet ID                           |
 		   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -39,15 +37,7 @@ All messages have a shared format as below.
 		
 		                               Header Format
 		
-	
 
-RES and ACK flags are set according to the message's role in a service call.
-
-| Message Type | RES | ACK |
-|--------------|-----|-----|
-| Request      | ✗   | ✗   |
-| Response     | ✓   | ✗   |
-| ACK Response | ✗   | ✓   |
 
 A packet with EOM flag set is considered to be the last packet of the message. Receiving such packet means that the whole message has been transfered.
 

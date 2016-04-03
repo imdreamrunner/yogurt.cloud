@@ -1,36 +1,45 @@
 package cloud.yogurt.shared.message;
 
+import cloud.yogurt.shared.network.EndPoint;
 import cloud.yogurt.shared.network.Packet;
+import cloud.yogurt.shared.network.PacketException;
+import cloud.yogurt.shared.sharedconfig.SharedConfig;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 /**
- * provides basic functionality for creating messages.
+ * provides basic functionality for creating messages to send.
  *
  */
 public abstract class SendingMessage {
-    private Queue<byte[]> data = new LinkedBlockingQueue<>();
-    private int byteSent;
-    private boolean dataFinished = false;
-
     private List<Packet> packetsBeingSent = new ArrayList<>();
 
-    public abstract MessageTarget getMessageTarget();
-    protected abstract SendingPacketHandler getMessagePacketHandler();
-    protected abstract MessageLoadDataHandler getMessageLoadDataHandler();
+    public abstract int getCallId();
+    public abstract boolean getResFlag();
+    public abstract EndPoint getMessageTarget();
+    protected abstract PacketSender getPacketSender();
+    protected abstract MessageDataLoader getMessageDataLoader();
 
-    public void appendData(byte[] bytes) {
-        this.data.add(bytes);
-    }
+    private MessageDataLoader loader = getMessageDataLoader();
+    private PacketSender sender = getPacketSender();
 
-    public void finishData() {
-        dataFinished = true;
-    }
-
-    public void handlePacketSent(Packet packet) {
-
+    public void send() throws IOException, PacketException {
+        while (loader.available() > 0) {
+            Packet packet = new Packet();
+            packet.callId = getCallId();
+            packet.endPoint = getMessageTarget();
+            int packetSize = Math.min(SharedConfig.MAX_DATAGRAM, loader.available());
+            packet.content = new byte[loader.available()];
+            int bytesRead = loader.read(packet.content);
+            if (bytesRead != packetSize) {
+                throw new PacketException("Bytes read is not equal to packet size.");
+            }
+            if (loader.available() == 0) {
+                packet.eomFlag = true;
+            }
+            sender.sendPacket(packet);
+        }
     }
 }

@@ -1,9 +1,9 @@
 package cloud.yogurt.client.servicecall;
 
-import cloud.yogurt.shared.message.MessageLoadDataHandler;
+import cloud.yogurt.shared.message.MessageDataLoader;
 import cloud.yogurt.shared.message.MessageTarget;
 import cloud.yogurt.shared.message.SendingMessage;
-import cloud.yogurt.shared.message.SendingPacketHandler;
+import cloud.yogurt.shared.message.PacketSender;
 
 public class RequestMessage extends SendingMessage {
     @Override
@@ -12,12 +12,12 @@ public class RequestMessage extends SendingMessage {
     }
 
     @Override
-    protected SendingPacketHandler getMessagePacketHandler() {
+    protected PacketSender getMessagePacketHandler() {
         return null;
     }
 
     @Override
-    protected MessageLoadDataHandler getMessageLoadDataHandler() {
+    protected MessageDataLoader getMessageDataLoader() {
         return null;
     }
 }

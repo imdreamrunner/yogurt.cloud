@@ -1,8 +1,7 @@
 package cloud.yogurt.shared.network;
 
 import cloud.yogurt.shared.logging.Logger;
-import cloud.yogurt.shared.message.SendingPacket;
-import cloud.yogurt.shared.message.SendingPacketHandler;
+import cloud.yogurt.shared.message.PacketSender;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -19,7 +18,7 @@ import static cloud.yogurt.shared.sharedconfig.SharedConfig.*;
  * Currently the implementation for `sendPacket` is asynchronized, i.e.
  * packet may not be sent after function returns.
  */
-public abstract class DatagramServer extends Thread implements SendingPacketHandler {
+public abstract class DatagramServer extends Thread implements PacketSender {
 
     private static Logger log = Logger.getLogger(DatagramServer.class.getName());
 
@@ -32,7 +31,7 @@ public abstract class DatagramServer extends Thread implements SendingPacketHand
     private byte[] receiveBuffer = new byte[MAX_DATAGRAM];
     private DatagramPacket receiveDatagram = new DatagramPacket(receiveBuffer, MAX_DATAGRAM);
 
-    private List<SendingPacket> packetsToSend = new LinkedList<>();
+    private List<Packet> packetsToSend = new LinkedList<>();
 
     protected abstract PacketHandler getPacketHandler();
 
@@ -96,26 +95,16 @@ public abstract class DatagramServer extends Thread implements SendingPacketHand
         }
     }
 
-    @Override
-    public void sendPacket(SendingPacket messagePacket) {
-        packetsToSend.add(messagePacket);
-    }
-
-    private void doSendPacket(SendingPacket messagePacket) throws PacketException {
-        byte[] constructedPacket = messagePacket.packet.construct();
+    public void sendPacket(Packet packet) throws PacketException {
+        byte[] constructedPacket = packet.construct();
         DatagramPacket sendingDatagram = new DatagramPacket(constructedPacket, constructedPacket.length);
-        sendingDatagram.setAddress(messagePacket.message.getMessageTarget().address);
-        sendingDatagram.setPort(messagePacket.message.getMessageTarget().port);
+        sendingDatagram.setAddress(packet.endPoint.address);
+        sendingDatagram.setPort(packet.endPoint.port);
         try {
             socket.send(sendingDatagram);
         } catch (IOException e) {
             e.printStackTrace();
         }
-        messagePacket.message.handlePacketSent(messagePacket.packet);
-    }
-
-    @Override
-    public void removePacketIfNotSent(Packet packet) {
     }
 
 }
