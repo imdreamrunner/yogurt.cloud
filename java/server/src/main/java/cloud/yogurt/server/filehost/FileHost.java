@@ -1,9 +1,15 @@
 package cloud.yogurt.server.filehost;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import cloud.yogurt.shared.logging.Logger;
+import cloud.yogurt.shared.sharedconfig.SharedConfig;
+
+import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.file.StandardOpenOption;
 
 public class FileHost {
+    private static Logger log = Logger.getLogger(FileHost.class.getName());
 
     public FileResolver get(String filename) throws FileNotFoundException {
         FileResolver fileResolver = new FileResolver(filename);
@@ -24,4 +30,18 @@ public class FileHost {
         return fileResolver;
     }
 
+    public void insert(String filename, long offset, byte[] fragment) throws IOException {
+        log.debug("Insert " + new String(fragment, SharedConfig.CONTENT_CHARSET) + " into " + filename +
+                " offset " + offset);
+
+        for (byte b: fragment
+                ) {
+            System.out.println("BBBBBBBB>>>>>>>>> " + b);
+        }
+
+        File file = new File(SharedConfig.SERVER_BASE_PATH + "/" + filename);
+        FileChannel channel = FileChannel.open(file.toPath(), StandardOpenOption.WRITE);
+        channel.position(offset);
+        channel.write(ByteBuffer.wrap(fragment));
+    }
 }

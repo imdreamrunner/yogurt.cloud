@@ -3,6 +3,7 @@ package cloud.yogurt.server.serverhost;
 import cloud.yogurt.server.filehost.FileHost;
 import cloud.yogurt.server.filehost.FileResolver;
 import cloud.yogurt.shared.header.Header;
+import cloud.yogurt.shared.header.HeaderIntegerValue;
 import cloud.yogurt.shared.logging.Logger;
 import cloud.yogurt.shared.message.EmptyDataLoader;
 import cloud.yogurt.shared.message.MessageHandler;
@@ -43,6 +44,17 @@ public class ClientMessageHandler implements MessageHandler {
                             new EmptyDataLoader(), receivingMessage.source);
                     this.serverHostThread.sendMessage(response);
                 }
+                break;
+            }
+            case "INSERT": {
+                String path = receivingMessage.header.getParams()[1];
+                int offset = ((HeaderIntegerValue)receivingMessage.header.getValue("Offset")).getValue();
+                byte[] data = receivingMessage.payload;
+                fileHost.insert(path, offset, data);
+                Header header = new Header(new String[]{"STATUS", "SUCCESS"}, new ArrayList<>());
+                ServerResponse response = new ServerResponse(receivingMessage.callId, header,
+                        new EmptyDataLoader(), receivingMessage.source);
+                this.serverHostThread.sendMessage(response);
             }
         }
     }

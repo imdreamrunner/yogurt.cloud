@@ -10,4 +10,7 @@ public class HeaderIntegerValue extends HeaderValue {
     public String toString() {
         return "" + this.value;
     }
+    public int getValue() {
+        return value;
+    }
 }

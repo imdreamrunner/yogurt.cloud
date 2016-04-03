@@ -2,6 +2,7 @@ package cloud.yogurt.client.cmd;
 
 import cloud.yogurt.client.remoteserver.RemoteServer;
 import cloud.yogurt.client.servicecall.GetFileByPath;
+import cloud.yogurt.client.servicecall.InsertFragment;
 import cloud.yogurt.client.servicecall.ServiceCall;
 import cloud.yogurt.shared.logging.Logger;
 import cloud.yogurt.shared.network.PacketException;
@@ -42,6 +43,15 @@ public class YogurtClient {
                     String path = components[1];
                     log.info("Trying to get " + path + " from server.");
                     makeServiceCall(new GetFileByPath(path));
+                    break;
+                }
+                case "insert": {
+                    String path = components[1];
+                    int offset = Integer.parseInt(components[2]);
+                    String fragment = components[3];
+                    log.info("Trying to insert " + fragment + " to " + path + ".");
+                    makeServiceCall(new InsertFragment(path, offset, fragment));
+                    break;
                 }
             }
         }

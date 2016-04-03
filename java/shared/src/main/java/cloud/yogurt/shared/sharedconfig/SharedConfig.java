@@ -12,7 +12,7 @@ public class SharedConfig {
 
     public static InetAddress SERVER_ADDRESS;
     public static int SERVER_PORT = 3000;
-    public static int MAX_DATAGRAM = 30;  // byte, default 65507
+    public static int MAX_DATAGRAM = 1000;  // byte, default 65507
     public static int PACKET_HEADER_SIZE = 4 * 3;
     public static int MAX_PACKET_PAYLOAD = MAX_DATAGRAM - PACKET_HEADER_SIZE;
 
