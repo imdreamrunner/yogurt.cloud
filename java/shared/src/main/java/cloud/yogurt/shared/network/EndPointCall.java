@@ -22,4 +22,8 @@ public class EndPointCall {
         }
         return false;
     }
+
+    public int hashCode() {
+        return callId;
+    }
 }

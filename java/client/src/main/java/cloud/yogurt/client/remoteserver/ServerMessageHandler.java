@@ -13,7 +13,7 @@ public class ServerMessageHandler implements MessageHandler {
         log.debug("Receive message from server.");
         log.debug("Message header:\n" + receivingMessage.header.toString());
 
-        String result = new String(receivingMessage.payload, SharedConfig.HEADER_CHARSET);
+        String result = new String(receivingMessage.payload, SharedConfig.CONTENT_CHARSET);
         System.out.println("Server Response:\n" + result);
     }
 }

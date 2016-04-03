@@ -22,8 +22,8 @@ public class Packet {
 
     public byte[] construct() throws PacketException {
         if (content == null) content = new byte[0];
-        if (PACKET_HEADER_SIZE > MAX_PACKET_PAYLOAD) {
-            throw new PacketException("Packet payload size too large, actual = " + PACKET_HEADER_SIZE);
+        if (content.length > MAX_PACKET_PAYLOAD) {
+            throw new PacketException("Packet payload size too large, actual = " + content.length);
         }
 
         byte[] datagram = new byte[PACKET_HEADER_SIZE + content.length];

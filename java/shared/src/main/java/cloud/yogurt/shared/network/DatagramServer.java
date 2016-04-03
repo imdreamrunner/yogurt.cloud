@@ -103,7 +103,13 @@ public abstract class DatagramServer extends Thread implements PacketSender {
                     " ACK=" + packet.ackPacket);
 
             if (setAckId(packet.endPoint, packet.callId, packet.id)) {
+                log.debug("Package is accepted.");
                 getPacketHandler().handlePacket(packet);
+                if (!packet.ackFlag) {
+                    sendAck(packet.endPoint, packet.callId);
+                }
+            } else {
+                log.debug("Package is dropped.");
             }
 
         }
@@ -143,12 +149,20 @@ public abstract class DatagramServer extends Thread implements PacketSender {
      * @return true only if is receiving next frame.
      */
     private boolean setAckId(EndPoint endPoint, int call, long id) {
-        if (getAckId(endPoint, call) == id - 1) {
+        if (getAckId(endPoint, call) == id) {
             EndPointCall endPointCall = new EndPointCall(endPoint, call);
-            ackId.put(endPointCall, id);
+            ackId.put(endPointCall, id + 1);
             return true;
         }
         return false;
+    }
+
+    private void sendAck(EndPoint endPoint, int call) throws PacketException {
+        Packet packet = new Packet();
+        packet.callId = call;
+        packet.endPoint = endPoint;
+        packet.ackFlag = true;
+        sendPacket(packet);
     }
 
     public void sendPacket(Packet packet) throws PacketException {
