@@ -17,7 +17,6 @@ public abstract class SendingMessage {
     private List<Packet> packetsBeingSent = new ArrayList<>();
 
     public abstract int getCallId();
-    public abstract boolean getResFlag();
     public abstract EndPoint getMessageTarget();
     protected abstract PacketSender getPacketSender();
     protected abstract MessageDataLoader getMessageDataLoader();
