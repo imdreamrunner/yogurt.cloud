@@ -13,17 +13,14 @@ public class ServerHost {
     private ServerHostPacketHandler packetHandler;
     private ServerHostThread hostThread;
 
-    public static void main(String[] args) throws IOException {
-        instance = new ServerHost();
-        instance.run();
-
-        log.info("Press any key to stop.");
-        System.in.read();
-
-        instance.stop();
+    public static ServerHost getInstance() {
+        if (instance == null) {
+            instance = new ServerHost();
+        }
+        return instance;
     }
 
-    private void run() {
+    public void run() {
         log.info("Server is being started.");
         packetHandler = new ServerHostPacketHandler();
         hostThread = new ServerHostThread();
@@ -31,7 +28,7 @@ public class ServerHost {
         hostThread.start();
     }
 
-    private void stop() {
+    public void stop() {
         log.info("Server is being stopped.");
         hostThread.stopServerHost();
     }

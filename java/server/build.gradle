@@ -5,7 +5,7 @@ apply plugin:'application'
 
 sourceCompatibility = 1.8
 
-mainClassName = "cloud.yogurt.server.serverhost.ServerHost"
+mainClassName = "cloud.yogurt.server.cmd.YogurtServer"
 
 repositories {
     mavenCentral()

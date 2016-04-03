@@ -1,12 +1,18 @@
 group 'cloud.yogurt'
 version '1.0-SNAPSHOT'
 
-apply plugin: 'java'
+apply plugin:'application'
 
 sourceCompatibility = 1.8
 
+mainClassName = "cloud.yogurt.client.cmd.YogurtClient"
+
 repositories {
     mavenCentral()
+}
+
+run{
+    standardInput = System.in
 }
 
 dependencies {
