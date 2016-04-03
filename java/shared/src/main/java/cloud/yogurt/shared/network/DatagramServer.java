@@ -1,7 +1,6 @@
 package cloud.yogurt.shared.network;
 
 import cloud.yogurt.shared.logging.Logger;
-import cloud.yogurt.shared.message.PacketSender;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -71,7 +70,8 @@ public abstract class DatagramServer extends Thread implements PacketSender {
         }
     }
 
-    public void stopServerHost() {
+    public void stopServer() {
+        log.debug("Stopping datagram server on port " + this.socket.getLocalPort() + ".");
         isStopped = true;
         if (socket != null && !socket.isClosed()) {
             socket.close();
@@ -97,6 +97,8 @@ public abstract class DatagramServer extends Thread implements PacketSender {
 
     public void sendPacket(Packet packet) throws PacketException {
         byte[] constructedPacket = packet.construct();
+        log.info("Send packet size " + constructedPacket.length + " to " +
+                packet.endPoint.address + ":" + packet.endPoint.port + ".");
         DatagramPacket sendingDatagram = new DatagramPacket(constructedPacket, constructedPacket.length);
         sendingDatagram.setAddress(packet.endPoint.address);
         sendingDatagram.setPort(packet.endPoint.port);

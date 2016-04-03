@@ -11,12 +11,14 @@ public class SharedConfig {
 
     public static InetAddress SERVER_ADDRESS;
     public static int SERVER_PORT = 3000;
-    public static int MAX_DATAGRAM = 65527;  // byte, default 65527
+    public static int MAX_DATAGRAM = 65507;  // byte, default 65507
+    public static int PACKET_HEADER_SIZE = 4 * 3;
+    public static int MAX_PACKET_PAYLOAD = MAX_DATAGRAM - PACKET_HEADER_SIZE;
 
     public static String CLIENT_BASE_PATH = System.getProperty("user.home") + "/YogurtCloud";
     public static String SERVER_BASE_PATH = System.getProperty("user.home") + "/YogurtServer";
 
-    {
+    static {
         try {
             SERVER_ADDRESS = InetAddress.getByName("127.0.0.1");
         } catch (UnknownHostException e) {

@@ -4,6 +4,7 @@ import cloud.yogurt.client.remoteserver.RemoteServer;
 import cloud.yogurt.client.servicecall.GetFileByPath;
 import cloud.yogurt.client.servicecall.ServiceCall;
 import cloud.yogurt.shared.logging.Logger;
+import cloud.yogurt.shared.network.PacketException;
 import cloud.yogurt.shared.sharedconfig.SharedConfig;
 
 import java.io.IOException;
@@ -14,7 +15,7 @@ public class YogurtClient {
 
     private static RemoteServer server;
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, PacketException {
         log.info("Starting Yogurt Client");
 
         server = new RemoteServer(SharedConfig.SERVER_ADDRESS, SharedConfig.SERVER_PORT);
@@ -34,6 +35,7 @@ public class YogurtClient {
             switch (function) {
                 case "exit": {
                     System.out.println("Bye.");
+                    server.stop();
                     System.exit(0);
                 }
                 case "get": {
@@ -45,7 +47,7 @@ public class YogurtClient {
         }
     }
 
-    private static void makeServiceCall(ServiceCall call) {
-
+    private static void makeServiceCall(ServiceCall call) throws IOException, PacketException {
+        server.makeServiceCall(call);
     }
 }

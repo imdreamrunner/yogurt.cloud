@@ -2,11 +2,12 @@ package cloud.yogurt.client.servicecall;
 
 import cloud.yogurt.shared.header.Header;
 import cloud.yogurt.shared.message.NonPayloadSendingMessage;
-import cloud.yogurt.shared.message.PacketSender;
+import cloud.yogurt.shared.network.PacketSender;
 import cloud.yogurt.shared.network.EndPoint;
 
 public class ServiceCall extends NonPayloadSendingMessage {
     private int nextCallId = 0;
+    private EndPoint serverEndPoint;
 
     public ServiceCall(Header header) {
         super(header);
@@ -18,14 +19,12 @@ public class ServiceCall extends NonPayloadSendingMessage {
         return nextCallId - 1;
     }
 
-
-    @Override
-    public EndPoint getMessageTarget() {
-        return null;
+    public void setTarget(EndPoint endPoint) {
+        this.serverEndPoint = endPoint;
     }
 
     @Override
-    protected PacketSender getPacketSender() {
-        return null;
+    public EndPoint getTarget() {
+        return serverEndPoint;
     }
 }

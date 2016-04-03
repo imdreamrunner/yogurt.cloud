@@ -9,7 +9,7 @@ import java.util.ArrayList;
 
 public class GetFileByPath extends ServiceCall {
     public GetFileByPath(String path) {
-        super(new Header(new String[]{"GET", path}, new ArrayList<HeaderRow>()));
+        super(new Header(new String[]{"GET", path}, new ArrayList<>()));
     }
 
     public GetFileByPath(String path, int offset, int limit) {

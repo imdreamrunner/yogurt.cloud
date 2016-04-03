@@ -1,11 +1,14 @@
 package cloud.yogurt.shared.header;
 
+import cloud.yogurt.shared.logging.Logger;
 import cloud.yogurt.shared.sharedconfig.SharedConfig;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class Header {
+    private static Logger log = Logger.getLogger(Header.class.getName());
+
     private String[] params;
     private  List<HeaderRow> headerRows;
 
@@ -26,6 +29,9 @@ public class Header {
             headerString.append(row.toString());
             headerString.append('\n');
         }
+
+        log.debug("Constructed header: \n" + headerString.toString());
+
         return headerString.toString();
     }
 

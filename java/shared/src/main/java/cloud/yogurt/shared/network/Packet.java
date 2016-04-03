@@ -7,7 +7,6 @@ import java.nio.ByteOrder;
 import static cloud.yogurt.shared.sharedconfig.SharedConfig.*;
 
 public class Packet {
-    static int PACKET_HEADER_SIZE = 4 * 3;
 
     public EndPoint endPoint;
 
@@ -23,8 +22,8 @@ public class Packet {
 
     public byte[] construct() throws PacketException {
         if (content == null) content = new byte[0];
-        if (PACKET_HEADER_SIZE + content.length > MAX_DATAGRAM) {
-            throw new PacketException("Packet size too large");
+        if (PACKET_HEADER_SIZE > MAX_PACKET_PAYLOAD) {
+            throw new PacketException("Packet payload size too large, actual = " + PACKET_HEADER_SIZE);
         }
 
         byte[] datagram = new byte[PACKET_HEADER_SIZE + content.length];

@@ -5,6 +5,6 @@ import java.io.IOException;
 public class EmptyDataLoader extends MessageDataLoader {
     @Override
     public int read() throws IOException {
-        return 0;
+        return -1;
     }
 }

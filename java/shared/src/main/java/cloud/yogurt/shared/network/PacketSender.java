@@ -1,6 +1,5 @@
-package cloud.yogurt.shared.message;
+package cloud.yogurt.shared.network;
 
-import cloud.yogurt.shared.network.EndPoint;
 import cloud.yogurt.shared.network.Packet;
 import cloud.yogurt.shared.network.PacketException;
 

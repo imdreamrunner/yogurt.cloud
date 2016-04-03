@@ -2,8 +2,6 @@ package cloud.yogurt.server.serverhost;
 
 import cloud.yogurt.shared.logging.Logger;
 
-import java.io.IOException;
-
 public class ServerHost {
 
     private static Logger log = Logger.getLogger(ServerHost.class.getName());
@@ -30,6 +28,6 @@ public class ServerHost {
 
     public void stop() {
         log.info("Server is being stopped.");
-        hostThread.stopServerHost();
+        hostThread.stopServer();
     }
 }
