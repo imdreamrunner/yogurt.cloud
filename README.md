@@ -19,7 +19,7 @@ All messages have a shared format as below.
 
 * Call ID: A unique 2 byte ID for a service call.
 * EOM: Indicating if the packet is the last packet for a message.
-* EOC: Indicating if the message is the last message of a call.
+* ACK: Indicating if the message is pure ACK, i.e. no need to ACK again.
 * Packet ID: A 4 byte integer representing the fragment ID for current message.
 * ACK Packet ID: Next packet expected from sender, for replying message only.
 * Packet Body: Data in the packet.
@@ -27,9 +27,9 @@ All messages have a shared format as below.
 		    0                   1                   2                   3   
 		    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 
 		   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-		   |                               |E|E|                           |
-		   |            Call ID            |O|O|         Reserved          |
-		   |                               |M|C|                           |
+		   |                               |E|A|                           |
+		   |            Call ID            |O|C|         Reserved          |
+		   |                               |M|K|                           |
 		   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 		   |                           Packet ID                           |
 		   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
