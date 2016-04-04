@@ -52,6 +52,10 @@ public class FileHost {
 
         Files.write(file.toPath(), modified);
 
+        notifyMonitor(filename);
+    }
+
+    private void notifyMonitor(String filename) throws IOException, PacketException {
         if (monitors.get(filename) != null) {
             for (FileChangeMonitor monitor: monitors.get(filename) ) {
                 monitor.fileChange();
@@ -66,5 +70,25 @@ public class FileHost {
             monitors.put(filename, new ArrayList<>());
         }
         monitors.get(filename).add(new FileChangeMonitor(filename, duration, endPoint, callId));
+    }
+
+    public void delete(String filename, int offset, int length) throws IOException, PacketException {
+        log.info("Delete " + filename + " from " + offset + " for " + length + ".");
+
+        File file = new File(SharedConfig.SERVER_BASE_PATH + "/" + filename);
+        byte[] data = Files.readAllBytes(file.toPath());
+        byte[] modified = new byte[data.length - length];
+
+        System.arraycopy(data, 0, modified, 0, offset);
+        System.arraycopy(data, offset + length, modified, offset, data.length - offset - length);
+
+        Files.write(file.toPath(), modified);
+
+        notifyMonitor(filename);
+    }
+
+    public long getLastModify(String filename) {
+        File file = new File(filename);
+        return file.lastModified();
     }
 }

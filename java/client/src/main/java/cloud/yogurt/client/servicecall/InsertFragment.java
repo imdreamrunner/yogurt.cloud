@@ -21,10 +21,6 @@ public class InsertFragment extends ServiceCall {
                 }),
                 fragment.getBytes(SharedConfig.CONTENT_CHARSET)
         );
-        for (byte b: fragment.getBytes(SharedConfig.CONTENT_CHARSET)
-             ) {
-            System.out.println("BBBBBBBB>>>>>>>>> " + b);
-        }
     }
 
 }

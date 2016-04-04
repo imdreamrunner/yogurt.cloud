@@ -1,10 +1,7 @@
 package cloud.yogurt.client.cmd;
 
 import cloud.yogurt.client.remoteserver.RemoteServer;
-import cloud.yogurt.client.servicecall.GetFileByPath;
-import cloud.yogurt.client.servicecall.InsertFragment;
-import cloud.yogurt.client.servicecall.MonitorFileChange;
-import cloud.yogurt.client.servicecall.ServiceCall;
+import cloud.yogurt.client.servicecall.*;
 import cloud.yogurt.shared.logging.Logger;
 import cloud.yogurt.shared.network.PacketException;
 import cloud.yogurt.shared.sharedconfig.SharedConfig;
@@ -59,6 +56,14 @@ public class YogurtClient {
 //                    int duration = Integer.parseInt(components[2]);
                     log.info("Monitor " + path + ".");
                     makeServiceCall(new MonitorFileChange(path, 10));
+                    break;
+                }
+                case "delete": {
+                    String path = components[1];
+                    int offset = Integer.parseInt(components[2]);
+                    int length = Integer.parseInt(components[3]);
+                    log.info("Trying to delete " + length + " from " + path + " at " + offset + ".");
+                    makeServiceCall(new DeleteRange(path, offset, length));
                     break;
                 }
             }
