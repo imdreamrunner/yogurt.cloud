@@ -6,6 +6,9 @@ import cloud.yogurt.shared.sharedconfig.SharedConfig;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
+/**
+ * Message data loader for packet header
+ */
 public class HeaderDataLoader extends MessageDataLoader {
     private ByteArrayInputStream byteInputStream;
 
