@@ -6,7 +6,7 @@ import cloud.yogurt.shared.message.PayloadSendingMessage;
 import cloud.yogurt.shared.network.EndPoint;
 
 /**
- * Sending message contructor for response to the client.
+ * Sending message constructor for response to the client.
  */
 public class ServerResponse extends PayloadSendingMessage {
 
