@@ -3,6 +3,9 @@ package cloud.yogurt.shared.message;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
+/**
+ * ByteData format message loader
+ */
 public class ByteDataLoader extends MessageDataLoader {
     private ByteArrayInputStream byteArrayInputStream;
 
