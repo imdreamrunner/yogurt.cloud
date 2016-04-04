@@ -18,6 +18,6 @@ public class ServerHostThread extends MessageServer {
 
     public ServerHostThread() {
         super(SERVER_PORT);
-        messageHandler = new ClientMessageHandler(this);
+        messageHandler = new ClientMessageHandler();
     }
 }

@@ -15,6 +15,7 @@ public class HeaderTest {
     public void prepareHeader() {
         String string = header.toString();
         Header after = Header.fromString(string);
+        System.out.println("HEADER\n" + string + "========");
         assertEquals(string, after.toString());
     }
 

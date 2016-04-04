@@ -64,6 +64,8 @@ public class MessagePacketHandler implements PacketHandler {
                 } else {
                     previousNewLine = true;
                 }
+            } else {
+                previousNewLine = false;
             }
         }
 

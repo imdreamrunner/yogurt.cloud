@@ -9,19 +9,18 @@ import cloud.yogurt.shared.message.EmptyDataLoader;
 import cloud.yogurt.shared.message.MessageHandler;
 import cloud.yogurt.shared.message.ReceivingMessage;
 import cloud.yogurt.shared.network.PacketException;
+import com.sun.corba.se.spi.activation.Server;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 
 public class ClientMessageHandler implements MessageHandler {
-    private ServerHostThread serverHostThread;
+    private ServerHostThread getServerHostThread () {
+        return ServerHost.getInstance().getHostThread();
+    }
     private static Logger log = Logger.getLogger(ClientMessageHandler.class.getName());
     private static FileHost fileHost = new FileHost();
-
-    public ClientMessageHandler(ServerHostThread serverHostThread) {
-        this.serverHostThread = serverHostThread;
-    }
 
     @Override
     public void handleMessage(ReceivingMessage receivingMessage) throws IOException, PacketException {
@@ -37,12 +36,12 @@ public class ClientMessageHandler implements MessageHandler {
                     Header header = new Header(new String[]{"STATUS", "SUCCESS"}, new ArrayList<>());
                     ServerResponse response = new ServerResponse(receivingMessage.callId, header,
                             fileResolver, receivingMessage.source);
-                    this.serverHostThread.sendMessage(response);
+                    this.getServerHostThread().sendMessage(response);
                 } catch (FileNotFoundException unused) {
                     Header header = new Header(new String[]{"STATUS", "ERROR"}, new ArrayList<>());
                     ServerResponse response = new ServerResponse(receivingMessage.callId, header,
                             new EmptyDataLoader(), receivingMessage.source);
-                    this.serverHostThread.sendMessage(response);
+                    this.getServerHostThread().sendMessage(response);
                 }
                 break;
             }
@@ -54,7 +53,14 @@ public class ClientMessageHandler implements MessageHandler {
                 Header header = new Header(new String[]{"STATUS", "SUCCESS"}, new ArrayList<>());
                 ServerResponse response = new ServerResponse(receivingMessage.callId, header,
                         new EmptyDataLoader(), receivingMessage.source);
-                this.serverHostThread.sendMessage(response);
+                this.getServerHostThread().sendMessage(response);
+                break;
+            }
+            case "MONITOR": {
+                String path = receivingMessage.header.getParams()[1];
+                int duration = ((HeaderIntegerValue)receivingMessage.header.getValue("Duration")).getValue();
+                fileHost.monitor(path, duration, receivingMessage.source, receivingMessage.callId);
+                break;
             }
         }
     }

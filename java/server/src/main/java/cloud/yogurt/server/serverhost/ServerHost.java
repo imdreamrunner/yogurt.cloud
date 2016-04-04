@@ -27,4 +27,8 @@ public class ServerHost {
         log.info("Server is being stopped.");
         hostThread.stopServer();
     }
+
+    public ServerHostThread getHostThread() {
+        return hostThread;
+    }
 }

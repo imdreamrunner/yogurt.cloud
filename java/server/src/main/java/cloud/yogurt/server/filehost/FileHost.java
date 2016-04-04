@@ -1,19 +1,27 @@
 package cloud.yogurt.server.filehost;
 
 import cloud.yogurt.shared.logging.Logger;
+import cloud.yogurt.shared.network.EndPoint;
+import cloud.yogurt.shared.network.PacketException;
 import cloud.yogurt.shared.sharedconfig.SharedConfig;
 
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class FileHost {
     private static Logger log = Logger.getLogger(FileHost.class.getName());
 
+    private Map<String, List<FileChangeMonitor>> monitors = new HashMap<>();
+
     public FileResolver get(String filename) throws FileNotFoundException {
-        FileResolver fileResolver = new FileResolver(filename);
-        return fileResolver;
+        return new FileResolver(filename);
     }
 
     public FileResolver get(String filename, long offset, long limit) throws FileHostException, FileNotFoundException {
@@ -30,18 +38,33 @@ public class FileHost {
         return fileResolver;
     }
 
-    public void insert(String filename, long offset, byte[] fragment) throws IOException {
+    public void insert(String filename, int offset, byte[] fragment) throws IOException, PacketException {
         log.debug("Insert " + new String(fragment, SharedConfig.CONTENT_CHARSET) + " into " + filename +
                 " offset " + offset);
 
-        for (byte b: fragment
-                ) {
-            System.out.println("BBBBBBBB>>>>>>>>> " + b);
-        }
-
         File file = new File(SharedConfig.SERVER_BASE_PATH + "/" + filename);
-        FileChannel channel = FileChannel.open(file.toPath(), StandardOpenOption.WRITE);
-        channel.position(offset);
-        channel.write(ByteBuffer.wrap(fragment));
+        byte[] data = Files.readAllBytes(file.toPath());
+        byte[] modified = new byte[data.length + fragment.length];
+
+        System.arraycopy(data, 0, modified, 0, offset);
+        System.arraycopy(fragment, 0, modified, offset, fragment.length);
+        System.arraycopy(data, offset, modified, offset + fragment.length, data.length - offset);
+
+        Files.write(file.toPath(), modified);
+
+        if (monitors.get(filename) != null) {
+            for (FileChangeMonitor monitor: monitors.get(filename) ) {
+                monitor.fileChange();
+            }
+        }
+    }
+
+    public void monitor(String filename, int duration, EndPoint endPoint, int callId) {
+        log.info("Start monitor " + filename + " from " + endPoint + ".");
+
+        if (monitors.get(filename) == null) {
+            monitors.put(filename, new ArrayList<>());
+        }
+        monitors.get(filename).add(new FileChangeMonitor(filename, duration, endPoint, callId));
     }
 }
