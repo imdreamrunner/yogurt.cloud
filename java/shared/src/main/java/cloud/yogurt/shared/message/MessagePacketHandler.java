@@ -74,8 +74,8 @@ public class MessagePacketHandler implements PacketHandler {
         byte[] payload = new byte[dataSize - payloadOffset];
         System.arraycopy(data, payloadOffset, payload, 0, payload.length);
 
-        int callId = receiveBuffer.get(0).callId;
-        EndPoint source = receiveBuffer.get(0).endPoint;
+        int callId = receiveBuffer.get(receiveBuffer.size() - 1).callId;
+        EndPoint source = receiveBuffer.get(receiveBuffer.size() - 1).endPoint;
 
         ReceivingMessage message = new ReceivingMessage(callId, source, header, payload);
         server.getMessageHandler().handleMessage(message);

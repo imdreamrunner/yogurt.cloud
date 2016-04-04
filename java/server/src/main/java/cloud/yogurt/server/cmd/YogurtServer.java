@@ -14,5 +14,6 @@ public class YogurtServer {
         int ignored = System.in.read();
 
         host.stop();
+        System.out.println("Bye.");
     }
 }

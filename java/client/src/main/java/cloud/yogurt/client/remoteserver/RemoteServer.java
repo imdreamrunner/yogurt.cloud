@@ -29,12 +29,17 @@ public class RemoteServer extends EndPoint {
         this.messageServer.start();
     }
 
-    public void makeServiceCall(ServiceCall serviceCall) throws IOException, PacketException {
+    public int makeServiceCall(ServiceCall serviceCall) throws IOException, PacketException {
         serviceCall.setTarget(this);
         this.messageServer.sendMessage(serviceCall);
+        return serviceCall.getCallId();
     }
 
     public void stop() {
         this.messageServer.stopServer();
+    }
+
+    public ServerMessageHandler getMessageHandler() {
+        return messageHandler;
     }
 }

@@ -26,4 +26,8 @@ public class EndPointCall {
     public int hashCode() {
         return callId;
     }
+
+    public String toString() {
+        return this.endPoint.toString() + "->" + callId;
+    }
 }

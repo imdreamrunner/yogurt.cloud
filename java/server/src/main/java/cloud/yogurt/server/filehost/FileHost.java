@@ -88,7 +88,7 @@ public class FileHost {
     }
 
     public long getLastModify(String filename) {
-        File file = new File(filename);
+        File file = new File(SharedConfig.SERVER_BASE_PATH + "/" + filename);
         return file.lastModified();
     }
 }

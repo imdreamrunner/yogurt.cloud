@@ -1,5 +1,7 @@
 package cloud.yogurt.client.cmd;
 
+import cloud.yogurt.client.filecache.FileCache;
+import cloud.yogurt.client.remoteserver.FileContentHandler;
 import cloud.yogurt.client.remoteserver.RemoteServer;
 import cloud.yogurt.client.servicecall.*;
 import cloud.yogurt.shared.logging.Logger;
@@ -13,6 +15,8 @@ public class YogurtClient {
     private static Logger log = Logger.getLogger(YogurtClient.class.getName());
 
     private static RemoteServer server;
+
+    private static FileCache fileCache = new FileCache();
 
     public static void main(String[] args) throws IOException, PacketException {
         log.info("Starting Yogurt Client");
@@ -40,7 +44,14 @@ public class YogurtClient {
                 case "get": {
                     String path = components[1];
                     log.info("Trying to get " + path + " from server.");
-                    makeServiceCall(new GetFileByPath(path));
+                    if (fileCache.getCache(path) == null) {
+                        int callId = makeServiceCall(new GetFileByPath(path));
+                        FileContentHandler fileContentHandler = new FileContentHandler(path, fileCache);
+                        server.getMessageHandler().registerHandler(callId, fileContentHandler);
+                    } else {
+                        System.out.println("File in cache:");
+                        System.out.println(new String(fileCache.getCache(path), SharedConfig.CONTENT_CHARSET));
+                    }
                     break;
                 }
                 case "insert": {
@@ -66,11 +77,17 @@ public class YogurtClient {
                     makeServiceCall(new DeleteRange(path, offset, length));
                     break;
                 }
+                case "check": {
+                    String path = components[1];
+                    log.info("Trying to check " + path + ".");
+                    makeServiceCall(new CheckFileStatus(path));
+                    break;
+                }
             }
         }
     }
 
-    private static void makeServiceCall(ServiceCall call) throws IOException, PacketException {
-        server.makeServiceCall(call);
+    private static int makeServiceCall(ServiceCall call) throws IOException, PacketException {
+        return server.makeServiceCall(call);
     }
 }

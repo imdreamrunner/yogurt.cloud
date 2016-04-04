@@ -3,14 +3,10 @@ package cloud.yogurt.server.filehost;
 import cloud.yogurt.server.serverhost.ServerHost;
 import cloud.yogurt.server.serverhost.ServerResponse;
 import cloud.yogurt.shared.header.Header;
-import cloud.yogurt.shared.header.HeaderRow;
 import cloud.yogurt.shared.logging.Logger;
-import cloud.yogurt.shared.message.EmptyDataLoader;
-import cloud.yogurt.shared.message.NonPayloadSendingMessage;
 import cloud.yogurt.shared.network.EndPoint;
 import cloud.yogurt.shared.network.PacketException;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 
