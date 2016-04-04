@@ -1,5 +1,8 @@
 package cloud.yogurt.shared.header;
 
+/**
+ * String value in header
+ */
 public class HeaderStringValue extends HeaderValue {
     private String value;
 
