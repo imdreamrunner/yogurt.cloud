@@ -10,7 +10,6 @@ import cloud.yogurt.shared.logging.Logger;
 import cloud.yogurt.shared.message.EmptyDataLoader;
 import cloud.yogurt.shared.message.MessageHandler;
 import cloud.yogurt.shared.message.ReceivingMessage;
-import cloud.yogurt.shared.network.EndPoint;
 import cloud.yogurt.shared.network.EndPointCall;
 import cloud.yogurt.shared.network.PacketException;
 
@@ -18,6 +17,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 
+/**
+ * The general handler for messages from client.
+ */
 public class ClientMessageHandler implements MessageHandler {
     private ServerHostThread getServerHostThread () {
         return ServerHost.getInstance().getHostThread();

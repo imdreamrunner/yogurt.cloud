@@ -7,6 +7,9 @@ import cloud.yogurt.shared.network.PacketHandler;
 
 import static cloud.yogurt.shared.sharedconfig.SharedConfig.*;
 
+/**
+ * Main thread for server host served as message server.
+ */
 public class ServerHostThread extends MessageServer {
 
     private ClientMessageHandler messageHandler;

@@ -5,6 +5,9 @@ import cloud.yogurt.shared.message.MessageDataLoader;
 import cloud.yogurt.shared.message.PayloadSendingMessage;
 import cloud.yogurt.shared.network.EndPoint;
 
+/**
+ * Sending message contructor for response to the client.
+ */
 public class ServerResponse extends PayloadSendingMessage {
 
     private int callId;
