@@ -10,6 +10,11 @@ public class EndPointCall {
         this.callId = call;
     }
 
+    /**
+     * Message control packet equal checker
+     * @param other
+     * @return
+     */
     @Override
     public boolean equals(Object other) {
         if (other instanceof EndPointCall) {
