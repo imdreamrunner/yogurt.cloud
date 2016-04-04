@@ -10,6 +10,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Message sending thread class that is used to send message 
+ * in a muli-threading mannaer
+ */
 public class SendMessageThread extends Thread {
     private SendingMessage message;
     private DatagramServer server;
@@ -20,6 +24,10 @@ public class SendMessageThread extends Thread {
 
     private static Logger log = Logger.getLogger(SendMessageThread.class.getName());
 
+    /**
+     * Send message execution
+     * Chunk message if exceeds MAX_PACKET_PAYLOAD
+     */
     public void run() {
         try {
             log.info("Send message to " + message.getTarget().address + ":" + message.getTarget().port + ".");
