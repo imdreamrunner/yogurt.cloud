@@ -1,5 +1,9 @@
 package cloud.yogurt.shared.header;
 
+/**
+ * Passed parameters are listed in rows
+ * With format of key and value pairs
+ */
 public class HeaderRow {
     public String key;
     public HeaderValue value;
