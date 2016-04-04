@@ -1,0 +1,2046 @@
+==> ./client/build.gradle <==
+group 'cloud.yogurt'
+version '1.0-SNAPSHOT'
+
+apply plugin:'application'
+
+sourceCompatibility = 1.8
+
+mainClassName = "cloud.yogurt.client.cmd.YogurtClient"
+
+repositories {
+    mavenCentral()
+}
+
+run{
+    standardInput = System.in
+}
+
+dependencies {
+    compile project(":shared")
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+}
+==> ./server/build.gradle <==
+group 'cloud.yogurt'
+version '1.0-SNAPSHOT'
+
+apply plugin:'application'
+
+sourceCompatibility = 1.8
+
+mainClassName = "cloud.yogurt.server.cmd.YogurtServer"
+
+repositories {
+    mavenCentral()
+}
+
+run{
+    standardInput = System.in
+}
+
+dependencies {
+    compile project(":shared")
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+}
+==> ./settings.gradle <==
+rootProject.name = 'YogurtCloud'
+
+include "shared"
+include "server"
+include "client"
+
+==> ./shared/build.gradle <==
+group 'cloud.yogurt'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile 'org.apache.commons:commons-lang3:3.4'
+    compile 'commons-io:commons-io:2.4'
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+}==> ./client/src/main/java/cloud/yogurt/client/cmd/YogurtClient.java <==
+package cloud.yogurt.client.cmd;
+
+import cloud.yogurt.client.remoteserver.RemoteServer;
+import cloud.yogurt.client.servicecall.*;
+import cloud.yogurt.shared.logging.Logger;
+import cloud.yogurt.shared.network.PacketException;
+import cloud.yogurt.shared.sharedconfig.SharedConfig;
+
+import java.io.IOException;
+import java.util.Scanner;
+
+public class YogurtClient {
+    private static Logger log = Logger.getLogger(YogurtClient.class.getName());
+
+    private static RemoteServer server;
+
+    public static void main(String[] args) throws IOException, PacketException {
+        log.info("Starting Yogurt Client");
+
+        server = new RemoteServer(SharedConfig.SERVER_ADDRESS, SharedConfig.SERVER_PORT);
+
+        System.out.println("Welcome to Yogurt Cloud.");
+        System.out.println();
+
+        Scanner scanner = new Scanner(System.in);
+        while (true) {
+            System.out.print(">> ");
+            String command = scanner.nextLine();
+            if (command.length() == 0) continue;
+
+            String[] components = command.split(" ");
+            String function = components[0];
+
+            switch (function) {
+                case "exit": {
+                    System.out.println("Bye.");
+                    server.stop();
+                    System.exit(0);
+                }
+                case "get": {
+                    String path = components[1];
+                    log.info("Trying to get " + path + " from server.");
+                    makeServiceCall(new GetFileByPath(path));
+                    break;
+                }
+                case "insert": {
+                    String path = components[1];
+                    int offset = Integer.parseInt(components[2]);
+                    String fragment = components[3];
+                    log.info("Trying to insert " + fragment + " to " + path + ".");
+                    makeServiceCall(new InsertFragment(path, offset, fragment));
+                    break;
+                }
+                case "monitor": {
+                    String path = components[1];
+//                    int duration = Integer.parseInt(components[2]);
+                    log.info("Monitor " + path + ".");
+                    makeServiceCall(new MonitorFileChange(path, 10));
+                    break;
+                }
+                case "delete": {
+                    String path = components[1];
+                    int offset = Integer.parseInt(components[2]);
+                    int length = Integer.parseInt(components[3]);
+                    log.info("Trying to delete " + length + " from " + path + " at " + offset + ".");
+                    makeServiceCall(new DeleteRange(path, offset, length));
+                    break;
+                }
+            }
+        }
+    }
+
+    private static void makeServiceCall(ServiceCall call) throws IOException, PacketException {
+        server.makeServiceCall(call);
+    }
+}
+
+==> ./client/src/main/java/cloud/yogurt/client/remoteserver/RemoteServer.java <==
+package cloud.yogurt.client.remoteserver;
+
+import cloud.yogurt.client.servicecall.ServiceCall;
+import cloud.yogurt.shared.message.MessageHandler;
+import cloud.yogurt.shared.message.MessageServer;
+import cloud.yogurt.shared.network.DatagramServer;
+import cloud.yogurt.shared.network.EndPoint;
+import cloud.yogurt.shared.network.PacketException;
+
+import java.io.IOException;
+import java.net.InetAddress;
+
+public class RemoteServer extends EndPoint {
+    private MessageServer messageServer;
+    private ServerMessageHandler messageHandler;
+
+    public RemoteServer(InetAddress address, int port) {
+        this.address = address;
+        this.port = port;
+
+        this.messageHandler = new ServerMessageHandler();
+
+        this.messageServer = new MessageServer() {
+            @Override
+            public MessageHandler getMessageHandler() {
+                return messageHandler;
+            }
+        };
+        this.messageServer.start();
+    }
+
+    public void makeServiceCall(ServiceCall serviceCall) throws IOException, PacketException {
+        serviceCall.setTarget(this);
+        this.messageServer.sendMessage(serviceCall);
+    }
+
+    public void stop() {
+        this.messageServer.stopServer();
+    }
+}
+
+==> ./client/src/main/java/cloud/yogurt/client/remoteserver/ServerMessageHandler.java <==
+package cloud.yogurt.client.remoteserver;
+
+import cloud.yogurt.shared.logging.Logger;
+import cloud.yogurt.shared.message.MessageHandler;
+import cloud.yogurt.shared.message.ReceivingMessage;
+import cloud.yogurt.shared.sharedconfig.SharedConfig;
+
+public class ServerMessageHandler implements MessageHandler {
+    private static Logger log = Logger.getLogger(ServerMessageHandler.class.getName());
+
+    @Override
+    public void handleMessage(ReceivingMessage receivingMessage) {
+        log.debug("Receive message from server.");
+        log.debug("Message header:\n" + receivingMessage.header.toString());
+
+        String result = new String(receivingMessage.payload, SharedConfig.CONTENT_CHARSET);
+        System.out.println("Server Response:\n" + result);
+    }
+}
+
+==> ./client/src/main/java/cloud/yogurt/client/servicecall/CheckFileStatus.java <==
+package cloud.yogurt.client.servicecall;
+
+import cloud.yogurt.shared.header.Header;
+
+import java.util.ArrayList;
+
+public class CheckFileStatus extends ServiceCall {
+    public CheckFileStatus(String path) {
+        super(new Header(new String[]{"CHECK", path}, new ArrayList<>()));
+    }
+}
+
+==> ./client/src/main/java/cloud/yogurt/client/servicecall/DeleteRange.java <==
+package cloud.yogurt.client.servicecall;
+
+import cloud.yogurt.shared.header.Header;
+import cloud.yogurt.shared.header.HeaderIntegerValue;
+import cloud.yogurt.shared.header.HeaderRow;
+
+import java.util.ArrayList;
+
+public class DeleteRange extends ServiceCall {
+
+    public DeleteRange(String path, int offset, int limit) {
+        super(new Header(new String[]{"DELETE", path}, new ArrayList<HeaderRow>() {
+            {
+                add(new HeaderRow("Offset", new HeaderIntegerValue(offset)));
+                add(new HeaderRow("Length", new HeaderIntegerValue(limit)));
+            }
+        }));
+    }
+
+}
+
+==> ./client/src/main/java/cloud/yogurt/client/servicecall/GetFileByPath.java <==
+package cloud.yogurt.client.servicecall;
+
+
+import cloud.yogurt.shared.header.Header;
+import cloud.yogurt.shared.header.HeaderIntegerValue;
+import cloud.yogurt.shared.header.HeaderRow;
+
+import java.util.ArrayList;
+
+public class GetFileByPath extends ServiceCall {
+    public GetFileByPath(String path) {
+        super(new Header(new String[]{"GET", path}, new ArrayList<>()));
+    }
+
+    public GetFileByPath(String path, int offset, int limit) {
+        super(new Header(new String[]{"GET", path}, new ArrayList<HeaderRow>() {
+            {
+                add(new HeaderRow("Offset", new HeaderIntegerValue(offset)));
+                add(new HeaderRow("Limit", new HeaderIntegerValue(limit)));
+            }
+        }));
+    }
+}
+
+==> ./client/src/main/java/cloud/yogurt/client/servicecall/InsertFragment.java <==
+package cloud.yogurt.client.servicecall;
+
+import cloud.yogurt.shared.header.Header;
+import cloud.yogurt.shared.header.HeaderIntegerValue;
+import cloud.yogurt.shared.header.HeaderRow;
+import cloud.yogurt.shared.logging.Logger;
+import cloud.yogurt.shared.sharedconfig.SharedConfig;
+
+import java.util.ArrayList;
+
+public class InsertFragment extends ServiceCall {
+
+    private static Logger log = Logger.getLogger(InsertFragment.class.getName());
+
+    public InsertFragment(String path, int offset, String fragment) {
+        super(
+                new Header(new String[] {"INSERT", path}, new ArrayList<HeaderRow>() {
+                    {
+                        add(new HeaderRow("Offset", new HeaderIntegerValue(offset)));
+                    }
+                }),
+                fragment.getBytes(SharedConfig.CONTENT_CHARSET)
+        );
+    }
+
+}
+
+==> ./client/src/main/java/cloud/yogurt/client/servicecall/MonitorFileChange.java <==
+package cloud.yogurt.client.servicecall;
+
+import cloud.yogurt.shared.header.Header;
+import cloud.yogurt.shared.header.HeaderIntegerValue;
+import cloud.yogurt.shared.header.HeaderRow;
+
+import java.util.ArrayList;
+
+public class MonitorFileChange extends ServiceCall {
+    public MonitorFileChange(String filename, int duration) {
+        super(new Header(
+                new String[] {"MONITOR", filename},
+                new ArrayList<HeaderRow>() {
+                    {
+                        add(new HeaderRow("Duration", new HeaderIntegerValue(duration)));
+                    }
+                }
+        ));
+    }
+}
+
+==> ./client/src/main/java/cloud/yogurt/client/servicecall/ServiceCall.java <==
+package cloud.yogurt.client.servicecall;
+
+import cloud.yogurt.shared.header.Header;
+import cloud.yogurt.shared.logging.Logger;
+import cloud.yogurt.shared.message.*;
+import cloud.yogurt.shared.network.EndPoint;
+
+public class ServiceCall extends PayloadSendingMessage {
+    private static Logger log = Logger.getLogger(ServiceCall.class.getName());
+
+    private static int nextCallId = 1;
+    private int callId;
+    private EndPoint serverEndPoint;
+    private MessageDataLoader dataLoader;
+
+    public ServiceCall(Header header) {
+        super(header);
+        callId = nextCallId;
+        nextCallId ++;
+        dataLoader = new EmptyDataLoader();
+
+        log.debug("Service call header:\n" + header.toString());
+    }
+
+    public ServiceCall(Header header, byte[] data) {
+        super(header);
+        callId = nextCallId;
+        nextCallId ++;
+        dataLoader = new ByteDataLoader(data);
+
+        log.debug("Service call header:\n" + header.toString());
+    }
+
+    @Override
+    public MessageDataLoader getPayloadDataLoader() {
+        return dataLoader;
+    }
+
+    @Override
+    public int getCallId() {
+        return callId;
+    }
+
+    public void setTarget(EndPoint endPoint) {
+        this.serverEndPoint = endPoint;
+    }
+
+    @Override
+    public EndPoint getTarget() {
+        return serverEndPoint;
+    }
+}
+
+==> ./client/src/test/java/cloud/yogurt/client/remoteserver/RemoveServerTest.java <==
+package cloud.yogurt.client.remoteserver;
+
+import cloud.yogurt.client.servicecall.GetFileByPath;
+import cloud.yogurt.client.servicecall.ServiceCall;
+import cloud.yogurt.shared.network.PacketException;
+import cloud.yogurt.shared.sharedconfig.SharedConfig;
+import org.junit.Test;
+
+import java.io.IOException;
+
+import static org.junit.Assert.*;
+
+public class RemoveServerTest {
+    @Test
+    public void dummyServiceCall() throws IOException, PacketException {
+        ServiceCall call = new GetFileByPath("test.txt");
+        assertTrue(call.getMessageDataLoader().available() > 0);
+    }
+
+    @Test
+    public void makeServiceCall() throws IOException, PacketException {
+        ServiceCall call = new GetFileByPath("test.txt");
+        RemoteServer server = new RemoteServer(SharedConfig.SERVER_ADDRESS, SharedConfig.SERVER_PORT);
+        server.makeServiceCall(call);
+    }
+}
+
+==> ./server/src/main/java/cloud/yogurt/server/clientpacket/ClientPacket.java <==
+package cloud.yogurt.server.clientpacket;
+
+import cloud.yogurt.shared.network.Packet;
+
+public class ClientPacket extends Packet {
+
+}
+
+==> ./server/src/main/java/cloud/yogurt/server/cmd/YogurtServer.java <==
+package cloud.yogurt.server.cmd;
+
+import cloud.yogurt.server.serverhost.ServerHost;
+
+import java.io.IOException;
+
+public class YogurtServer {
+    public static void main(String[] args) throws IOException {
+
+        ServerHost host = ServerHost.getInstance();
+        host.run();
+
+        System.out.println("Press any key to stop.");
+        int ignored = System.in.read();
+
+        host.stop();
+    }
+}
+
+==> ./server/src/main/java/cloud/yogurt/server/filehost/FileChangeMonitor.java <==
+package cloud.yogurt.server.filehost;
+
+import cloud.yogurt.server.serverhost.ServerHost;
+import cloud.yogurt.server.serverhost.ServerResponse;
+import cloud.yogurt.shared.header.Header;
+import cloud.yogurt.shared.header.HeaderRow;
+import cloud.yogurt.shared.logging.Logger;
+import cloud.yogurt.shared.message.EmptyDataLoader;
+import cloud.yogurt.shared.message.NonPayloadSendingMessage;
+import cloud.yogurt.shared.network.EndPoint;
+import cloud.yogurt.shared.network.PacketException;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.ArrayList;
+
+public class FileChangeMonitor {
+    private static Logger log = Logger.getLogger(FileChangeMonitor.class.getName());
+
+    private EndPoint endPoint;
+    private int callId;
+    private int duration;
+    private String filename;
+
+    FileChangeMonitor(String filename, int duration, EndPoint endPoint, int callId) {
+        log.debug("File change monitor is created.");
+
+        this.filename = filename;
+        this.duration = duration;
+        this.endPoint = endPoint;
+        this.callId = callId;
+    }
+
+    public void fileChange() throws IOException, PacketException {
+        ServerHost.getInstance().getHostThread().sendMessage(new ServerResponse(
+                callId,
+                new Header(
+                        new String[] {"NOTICE", filename},
+                        new ArrayList<>()
+                ),
+                new FileResolver(filename),
+                endPoint
+        ));
+    }
+}
+
+==> ./server/src/main/java/cloud/yogurt/server/filehost/FileHost.java <==
+package cloud.yogurt.server.filehost;
+
+import cloud.yogurt.shared.logging.Logger;
+import cloud.yogurt.shared.network.EndPoint;
+import cloud.yogurt.shared.network.PacketException;
+import cloud.yogurt.shared.sharedconfig.SharedConfig;
+
+import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class FileHost {
+    private static Logger log = Logger.getLogger(FileHost.class.getName());
+
+    private Map<String, List<FileChangeMonitor>> monitors = new HashMap<>();
+
+    public FileResolver get(String filename) throws FileNotFoundException {
+        return new FileResolver(filename);
+    }
+
+    public FileResolver get(String filename, long offset, long limit) throws FileHostException, FileNotFoundException {
+        FileResolver fileResolver = new FileResolver(filename);
+        long actualSkipped;
+        try {
+            actualSkipped = fileResolver.skip(offset);
+        } catch (IOException e) {
+            throw new FileHostException(100, "Cannot read file.");
+        }
+        if (actualSkipped != offset) {
+            throw new FileHostException(101, "Cannot skip file.");
+        }
+        return fileResolver;
+    }
+
+    public void insert(String filename, int offset, byte[] fragment) throws IOException, PacketException {
+        log.debug("Insert " + new String(fragment, SharedConfig.CONTENT_CHARSET) + " into " + filename +
+                " offset " + offset);
+
+        File file = new File(SharedConfig.SERVER_BASE_PATH + "/" + filename);
+        byte[] data = Files.readAllBytes(file.toPath());
+        byte[] modified = new byte[data.length + fragment.length];
+
+        System.arraycopy(data, 0, modified, 0, offset);
+        System.arraycopy(fragment, 0, modified, offset, fragment.length);
+        System.arraycopy(data, offset, modified, offset + fragment.length, data.length - offset);
+
+        Files.write(file.toPath(), modified);
+
+        notifyMonitor(filename);
+    }
+
+    private void notifyMonitor(String filename) throws IOException, PacketException {
+        if (monitors.get(filename) != null) {
+            for (FileChangeMonitor monitor: monitors.get(filename) ) {
+                monitor.fileChange();
+            }
+        }
+    }
+
+    public void monitor(String filename, int duration, EndPoint endPoint, int callId) {
+        log.info("Start monitor " + filename + " from " + endPoint + ".");
+
+        if (monitors.get(filename) == null) {
+            monitors.put(filename, new ArrayList<>());
+        }
+        monitors.get(filename).add(new FileChangeMonitor(filename, duration, endPoint, callId));
+    }
+
+    public void delete(String filename, int offset, int length) throws IOException, PacketException {
+        log.info("Delete " + filename + " from " + offset + " for " + length + ".");
+
+        File file = new File(SharedConfig.SERVER_BASE_PATH + "/" + filename);
+        byte[] data = Files.readAllBytes(file.toPath());
+        byte[] modified = new byte[data.length - length];
+
+        System.arraycopy(data, 0, modified, 0, offset);
+        System.arraycopy(data, offset + length, modified, offset, data.length - offset - length);
+
+        Files.write(file.toPath(), modified);
+
+        notifyMonitor(filename);
+    }
+
+    public long getLastModify(String filename) {
+        File file = new File(filename);
+        return file.lastModified();
+    }
+}
+
+==> ./server/src/main/java/cloud/yogurt/server/filehost/FileHostException.java <==
+package cloud.yogurt.server.filehost;
+
+import cloud.yogurt.shared.common.YogurtException;
+
+public class FileHostException extends YogurtException {
+    public FileHostException(int error, String message) {
+        super(error, "FileHostException: " + message);
+    }
+}
+
+==> ./server/src/main/java/cloud/yogurt/server/filehost/FileResolver.java <==
+package cloud.yogurt.server.filehost;
+
+import cloud.yogurt.shared.message.MessageDataLoader;
+import cloud.yogurt.shared.sharedconfig.SharedConfig;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+
+public class FileResolver extends MessageDataLoader {
+
+    private File file;
+    private FileInputStream fileInputStream;
+
+    public FileResolver(String path) throws FileNotFoundException {
+        file = new File(SharedConfig.SERVER_BASE_PATH + "/" + path);
+        fileInputStream = new FileInputStream(file);
+    }
+
+    @Override
+    public int read() throws IOException {
+        return fileInputStream.read();
+    }
+}
+
+==> ./server/src/main/java/cloud/yogurt/server/serverclient/ServerClient.java <==
+package cloud.yogurt.server.serverclient;
+
+public class ServerClient {
+}
+
+==> ./server/src/main/java/cloud/yogurt/server/serverconfig/ServerConfig.java <==
+package cloud.yogurt.server.serverconfig;
+
+public class ServerConfig {
+}
+
+==> ./server/src/main/java/cloud/yogurt/server/serverhost/ClientMessageHandler.java <==
+package cloud.yogurt.server.serverhost;
+
+import cloud.yogurt.server.filehost.FileHost;
+import cloud.yogurt.server.filehost.FileResolver;
+import cloud.yogurt.shared.header.Header;
+import cloud.yogurt.shared.header.HeaderIntegerValue;
+import cloud.yogurt.shared.header.HeaderRow;
+import cloud.yogurt.shared.logging.Logger;
+import cloud.yogurt.shared.message.EmptyDataLoader;
+import cloud.yogurt.shared.message.MessageHandler;
+import cloud.yogurt.shared.message.ReceivingMessage;
+import cloud.yogurt.shared.network.PacketException;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.ArrayList;
+
+public class ClientMessageHandler implements MessageHandler {
+    private ServerHostThread getServerHostThread () {
+        return ServerHost.getInstance().getHostThread();
+    }
+    private static Logger log = Logger.getLogger(ClientMessageHandler.class.getName());
+    private static FileHost fileHost = new FileHost();
+
+    @Override
+    public void handleMessage(ReceivingMessage receivingMessage) throws IOException, PacketException {
+        log.debug("Receive message from client.");
+
+        String action = receivingMessage.header.getParams()[0];
+
+        switch (action) {
+            case "GET": {
+                String path = receivingMessage.header.getParams()[1];
+                try {
+                    FileResolver fileResolver = fileHost.get(path);
+                    Header header = new Header(new String[]{"STATUS", "SUCCESS"}, new ArrayList<>());
+                    ServerResponse response = new ServerResponse(receivingMessage.callId, header,
+                            fileResolver, receivingMessage.source);
+                    this.getServerHostThread().sendMessage(response);
+                } catch (FileNotFoundException unused) {
+                    Header header = new Header(new String[]{"STATUS", "ERROR"}, new ArrayList<>());
+                    ServerResponse response = new ServerResponse(receivingMessage.callId, header,
+                            new EmptyDataLoader(), receivingMessage.source);
+                    this.getServerHostThread().sendMessage(response);
+                }
+                break;
+            }
+            case "INSERT": {
+                String path = receivingMessage.header.getParams()[1];
+                int offset = (int)((HeaderIntegerValue)receivingMessage.header.getValue("Offset")).getValue();
+                byte[] data = receivingMessage.payload;
+                fileHost.insert(path, offset, data);
+                Header header = new Header(new String[]{"STATUS", "SUCCESS"}, new ArrayList<>());
+                ServerResponse response = new ServerResponse(receivingMessage.callId, header,
+                        new EmptyDataLoader(), receivingMessage.source);
+                this.getServerHostThread().sendMessage(response);
+                break;
+            }
+            case "MONITOR": {
+                String path = receivingMessage.header.getParams()[1];
+                int duration = (int)((HeaderIntegerValue)receivingMessage.header.getValue("Duration")).getValue();
+                fileHost.monitor(path, duration, receivingMessage.source, receivingMessage.callId);
+                break;
+            }
+            case "DELETE": {
+                String path = receivingMessage.header.getParams()[1];
+                int offset = (int)((HeaderIntegerValue)receivingMessage.header.getValue("Offset")).getValue();
+                int length = (int)((HeaderIntegerValue)receivingMessage.header.getValue("Length")).getValue();
+                fileHost.delete(path, offset, length);
+                Header header = new Header(new String[]{"STATUS", "SUCCESS"}, new ArrayList<>());
+                ServerResponse response = new ServerResponse(receivingMessage.callId, header,
+                        new EmptyDataLoader(), receivingMessage.source);
+                this.getServerHostThread().sendMessage(response);
+                break;
+            }
+            case "CHECK": {
+                String path = receivingMessage.header.getParams()[1];
+                boolean exist;
+                try {
+                    FileResolver fileResolver = fileHost.get(path);
+                    exist = true;
+                } catch (FileNotFoundException unused) {
+                    exist = false;
+                }
+                if (exist) {
+                    Header header = new Header(new String[]{"STATUS", "SUCCESS"}, new ArrayList<HeaderRow>() {
+                        {
+                            add(new HeaderRow("LastModify",
+                                    new HeaderIntegerValue( fileHost.getLastModify(path))));
+                        }
+                    });
+                    ServerResponse response = new ServerResponse(receivingMessage.callId, header,
+                            new EmptyDataLoader(), receivingMessage.source);
+                    this.getServerHostThread().sendMessage(response);
+                }
+                break;
+            }
+        }
+    }
+}
+
+==> ./server/src/main/java/cloud/yogurt/server/serverhost/ServerHost.java <==
+package cloud.yogurt.server.serverhost;
+
+import cloud.yogurt.shared.logging.Logger;
+
+public class ServerHost {
+
+    private static Logger log = Logger.getLogger(ServerHost.class.getName());
+
+    private static ServerHost instance;
+
+    private ServerHostThread hostThread;
+
+    public static ServerHost getInstance() {
+        if (instance == null) {
+            instance = new ServerHost();
+        }
+        return instance;
+    }
+
+    public void run() {
+        log.info("Server is being started.");
+        hostThread = new ServerHostThread();
+        hostThread.start();
+    }
+
+    public void stop() {
+        log.info("Server is being stopped.");
+        hostThread.stopServer();
+    }
+
+    public ServerHostThread getHostThread() {
+        return hostThread;
+    }
+}
+
+==> ./server/src/main/java/cloud/yogurt/server/serverhost/ServerHostThread.java <==
+package cloud.yogurt.server.serverhost;
+
+import cloud.yogurt.shared.message.MessageHandler;
+import cloud.yogurt.shared.message.MessageServer;
+import cloud.yogurt.shared.network.DatagramServer;
+import cloud.yogurt.shared.network.PacketHandler;
+
+import static cloud.yogurt.shared.sharedconfig.SharedConfig.*;
+
+public class ServerHostThread extends MessageServer {
+
+    private ClientMessageHandler messageHandler;
+
+    @Override
+    public MessageHandler getMessageHandler() {
+        return messageHandler;
+    }
+
+    public ServerHostThread() {
+        super(SERVER_PORT);
+        messageHandler = new ClientMessageHandler();
+    }
+}
+
+==> ./server/src/main/java/cloud/yogurt/server/serverhost/ServerResponse.java <==
+package cloud.yogurt.server.serverhost;
+
+import cloud.yogurt.shared.header.Header;
+import cloud.yogurt.shared.message.MessageDataLoader;
+import cloud.yogurt.shared.message.PayloadSendingMessage;
+import cloud.yogurt.shared.network.EndPoint;
+
+public class ServerResponse extends PayloadSendingMessage {
+
+    private int callId;
+    private MessageDataLoader dataLoader;
+    private EndPoint endPoint;
+
+
+    public ServerResponse(int callId, Header header, MessageDataLoader dataLoader, EndPoint target) {
+        super(header);
+        this.callId = callId;
+        this.dataLoader = dataLoader;
+        this.endPoint = target;
+    }
+
+    @Override
+    public MessageDataLoader getPayloadDataLoader() {
+        return dataLoader;
+    }
+
+    @Override
+    public int getCallId() {
+        return callId;
+    }
+
+    @Override
+    public EndPoint getTarget() {
+        return this.endPoint;
+    }
+}
+
+==> ./server/src/test/java/cloud/yogurt/server/filehost/FileResolverTest.java <==
+package cloud.yogurt.server.filehost;
+
+import cloud.yogurt.shared.sharedconfig.SharedConfig;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.util.Scanner;
+
+import static org.junit.Assert.*;
+
+public class FileResolverTest {
+    String LINE_1 = "Line 1.";
+    String LINE_2 = "Line 2.";
+
+    @Before
+    public void prepareFile() throws FileNotFoundException, UnsupportedEncodingException {
+        String serverBasePath = SharedConfig.SERVER_BASE_PATH;
+        File baseDirectory = new File(serverBasePath);
+        if (!baseDirectory.exists()) {
+            boolean result = baseDirectory.mkdir();
+            assertTrue(result);
+        }
+        File textFile = new File(serverBasePath + "/test.txt");
+        PrintWriter writer = new PrintWriter(textFile, String.valueOf(SharedConfig.CONTENT_CHARSET));
+        writer.println(LINE_1);
+        writer.println(LINE_2);
+        writer.close();
+    }
+
+    @Test
+    public void readWholeFile() throws IOException {
+        int maxFileSize = 1000;
+        byte[] buffer = new byte[maxFileSize];
+        FileResolver fileResolver = new FileResolver("test.txt");
+        int fileSize = fileResolver.read(buffer);
+        byte[] stringInBytes = new byte[fileSize];
+        System.arraycopy(buffer, 0, stringInBytes, 0, fileSize);
+        assertEquals(new String(stringInBytes, SharedConfig.CONTENT_CHARSET), LINE_1 + "\n" + LINE_2 + "\n");
+    }
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/common/YogurtException.java <==
+package cloud.yogurt.shared.common;
+
+public class YogurtException extends Exception {
+    private int error;
+
+    public YogurtException() {
+        super("[YogurtException]");
+    }
+
+    public YogurtException(String s) {
+        super("[YogurtException] " + s);
+    }
+
+    public YogurtException(int error, String s) {
+        super("[YogurtException] " + s);
+    }
+
+    public int getError(){
+        return error;
+    }
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/header/Header.java <==
+package cloud.yogurt.shared.header;
+
+import cloud.yogurt.shared.logging.Logger;
+import cloud.yogurt.shared.sharedconfig.SharedConfig;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Header {
+    private static Logger log = Logger.getLogger(Header.class.getName());
+
+    private String[] params;
+    private  List<HeaderRow> headerRows;
+
+    public Header(String[] params, List<HeaderRow> headerRows) {
+        this.params = params;
+        this.headerRows = headerRows;
+    }
+
+    public String[] getParams() {
+        return this.params;
+    }
+
+    public HeaderValue getValue(String key) {
+        for (HeaderRow row : headerRows) {
+            if (row.key.equals(key)) {
+                return row.value;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public String toString() {
+        StringBuffer headerString = new StringBuffer(SharedConfig.CURRENT_API_VERSION);
+        for (String param: params) {
+            headerString.append(' ');
+            headerString.append(param);
+        }
+        headerString.append('\n');
+        for (HeaderRow row : headerRows) {
+            headerString.append(row.toString());
+            headerString.append('\n');
+        }
+        headerString.append('\n');
+
+        return headerString.toString();
+    }
+
+
+    public static Header fromString(String string) {
+        String[] lines = string.split("\n");
+        String[] firstLines = lines[0].split(" ");
+        String[] params = new String[firstLines.length - 1];
+        System.arraycopy(firstLines, 1, params, 0, firstLines.length - 1);
+        List<HeaderRow> rows = new ArrayList<>();
+        for (int i = 1; i < lines.length; i ++) {
+            if (lines[i].length() > 0) {
+                String[] keyValuePair = lines[i].split(": ");
+                String key = keyValuePair[0];
+                String value = keyValuePair[1];
+                HeaderValue headerValue;
+                try {
+                    int intValue = Integer.parseInt(value);
+                    headerValue = new HeaderIntegerValue(intValue);
+                } catch (NumberFormatException ignored) {
+                    headerValue = new HeaderStringValue(value);
+                }
+                rows.add(new HeaderRow(key, headerValue));
+            }
+        }
+        Header header = new Header(params, rows);
+        return header;
+    }
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/header/HeaderIntegerValue.java <==
+package cloud.yogurt.shared.header;
+
+public class HeaderIntegerValue extends HeaderValue {
+    private long value;
+
+    public HeaderIntegerValue(long value) {
+        this.value = value;
+    }
+    @Override
+    public String toString() {
+        return "" + this.value;
+    }
+    public long getValue() {
+        return value;
+    }
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/header/HeaderRow.java <==
+package cloud.yogurt.shared.header;
+
+public class HeaderRow {
+    public String key;
+    public HeaderValue value;
+
+    public HeaderRow(String key, HeaderValue value) {
+        this.key = key;
+        this.value = value;
+    }
+
+    @Override
+    public String toString() {
+        return key + ": " + value.toString();
+    }
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/header/HeaderStringValue.java <==
+package cloud.yogurt.shared.header;
+
+public class HeaderStringValue extends HeaderValue {
+    private String value;
+
+    HeaderStringValue(String value) {
+        this.value = value;
+    }
+    @Override
+    public String toString() {
+        return this.value;
+    }
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/header/HeaderValue.java <==
+package cloud.yogurt.shared.header;
+
+public class HeaderValue {
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/logging/Level.java <==
+package cloud.yogurt.shared.logging;
+
+public enum Level {
+    DEBUG,
+    INFO,
+    WARNING,
+    ERROR
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/logging/Logger.java <==
+package cloud.yogurt.shared.logging;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+/**
+ * Logger used by all Yogurt classes.
+ */
+public class Logger {
+    private String name;
+
+    private Logger(String name) {
+        this.name = name;
+    }
+
+    private static String getLogLevelName(Level level) {
+        return level.name();
+    }
+
+    private static String getCurrentTime() {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+        Date now = new Date();
+        return simpleDateFormat.format(now);
+    }
+
+    public synchronized void log(Level level, String tag, String message) {
+        StringBuilder logString = new StringBuilder();
+        logString.append(getCurrentTime());
+        logString.append(" ");
+        logString.append(getLogLevelName(level));
+        logString.append(" ");
+        logString.append(name);
+        logString.append(" ");
+        if (tag != null) {
+            logString.append(" [");
+            logString.append(tag);
+            logString.append("] ");
+        }
+        logString.append(message);
+        System.err.println(logString.toString());
+    }
+
+    public void debug(String tag, String message) {
+        log(Level.DEBUG, tag, message);
+    }
+
+    public void debug(String message) {
+        log(Level.DEBUG, null, message);
+    }
+
+    public void info(String tag, String message) {
+        log(Level.INFO, tag, message);
+    }
+
+    public void info(String message) {
+        log(Level.INFO, null, message);
+    }
+
+    public void warn(String tag, String message) {
+        log(Level.WARNING, tag, message);
+    }
+
+    public void warn(String message) {
+        log(Level.WARNING, null, message);
+    }
+
+    public void error(String tag, String message) {
+        log(Level.ERROR, tag, message);
+    }
+
+    public void error(String message) {
+        log(Level.ERROR, null, message);
+    }
+
+    public static Logger getLogger(String name) {
+        return new Logger(name);
+    }
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/message/ByteDataLoader.java <==
+package cloud.yogurt.shared.message;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+
+public class ByteDataLoader extends MessageDataLoader {
+    private ByteArrayInputStream byteArrayInputStream;
+
+    public ByteDataLoader(byte[] data) {
+        byteArrayInputStream = new ByteArrayInputStream(data);
+    }
+
+    @Override
+    public int read() throws IOException {
+        return byteArrayInputStream.read();
+    }
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/message/CombineDataLoader.java <==
+package cloud.yogurt.shared.message;
+
+import java.io.IOException;
+import java.io.SequenceInputStream;
+
+public class CombineDataLoader extends MessageDataLoader {
+    SequenceInputStream sequenceInputStream;
+
+    public CombineDataLoader(MessageDataLoader loader1, MessageDataLoader loader2) {
+        sequenceInputStream = new SequenceInputStream(loader1, loader2);
+    }
+
+    @Override
+    public int read() throws IOException {
+        return sequenceInputStream.read();
+    }
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/message/EmptyDataLoader.java <==
+package cloud.yogurt.shared.message;
+
+import java.io.IOException;
+
+public class EmptyDataLoader extends MessageDataLoader {
+    @Override
+    public int read() throws IOException {
+        return -1;
+    }
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/message/HeaderDataLoader.java <==
+package cloud.yogurt.shared.message;
+
+import cloud.yogurt.shared.header.Header;
+import cloud.yogurt.shared.sharedconfig.SharedConfig;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+
+public class HeaderDataLoader extends MessageDataLoader {
+    private ByteArrayInputStream byteInputStream;
+
+    public HeaderDataLoader(Header header) {
+        String headerAsString = header.toString();
+        byte[] headerAsByte = headerAsString.getBytes(SharedConfig.HEADER_CHARSET);
+        byteInputStream = new ByteArrayInputStream(headerAsByte);
+    }
+
+    @Override
+    public int read() throws IOException {
+        return byteInputStream.read();
+    }
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/message/MessageDataLoader.java <==
+package cloud.yogurt.shared.message;
+
+import java.io.InputStream;
+
+public abstract class MessageDataLoader extends InputStream {
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/message/MessageHandler.java <==
+package cloud.yogurt.shared.message;
+
+import cloud.yogurt.shared.network.PacketException;
+
+import java.io.IOException;
+
+public interface MessageHandler {
+    void handleMessage(ReceivingMessage receivingMessage) throws IOException, PacketException;
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/message/MessagePacketHandler.java <==
+package cloud.yogurt.shared.message;
+
+import cloud.yogurt.shared.header.Header;
+import cloud.yogurt.shared.logging.Logger;
+import cloud.yogurt.shared.network.EndPoint;
+import cloud.yogurt.shared.network.Packet;
+import cloud.yogurt.shared.network.PacketException;
+import cloud.yogurt.shared.network.PacketHandler;
+import cloud.yogurt.shared.sharedconfig.SharedConfig;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+public class MessagePacketHandler implements PacketHandler {
+
+    private static Logger log = Logger.getLogger(MessagePacketHandler.class.getName());
+
+    private MessageServer server;
+
+    List<Packet> receiveBuffer = new ArrayList<>();
+
+    public MessagePacketHandler(MessageServer server) {
+        this.server = server;
+    }
+
+    @Override
+    public void handlePacket(Packet packet) throws IOException, PacketException {
+        receiveBuffer.add(packet);
+        if (packet.eomFlag) {
+            consumePackets();
+        }
+    }
+
+    synchronized private void consumePackets() throws IOException, PacketException {
+        int dataSize = 0;
+        for (Packet packet : receiveBuffer) {
+            dataSize += packet.content.length;
+        }
+        byte[] data = new byte[dataSize];
+        int pos = 0;
+
+        for (Packet packet : receiveBuffer) {
+            System.arraycopy(packet.content, 0, data, pos, packet.content.length);
+            pos += packet.content.length;
+        }
+
+        log.info("Total message length: " + data.length);
+
+        int payloadOffset = 0;
+        boolean previousNewLine = false;
+        StringBuilder headerString = new StringBuilder();
+
+        for (int i = 0; i < data.length; i += 2) {
+            byte[] nextChar = new byte[2];
+            nextChar[0] = data[i];
+            nextChar[1] = data[i+1];
+            String partial = new String(nextChar, SharedConfig.HEADER_CHARSET);
+            headerString.append(partial);
+            if (partial.equals("\n")) {
+                if (previousNewLine) {
+                    payloadOffset = i + 2;
+                    break;
+                } else {
+                    previousNewLine = true;
+                }
+            } else {
+                previousNewLine = false;
+            }
+        }
+
+        Header header = Header.fromString(headerString.toString());
+
+        byte[] payload = new byte[dataSize - payloadOffset];
+        System.arraycopy(data, payloadOffset, payload, 0, payload.length);
+
+        int callId = receiveBuffer.get(0).callId;
+        EndPoint source = receiveBuffer.get(0).endPoint;
+
+        ReceivingMessage message = new ReceivingMessage(callId, source, header, payload);
+        server.getMessageHandler().handleMessage(message);
+
+        receiveBuffer.clear();
+    }
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/message/MessageServer.java <==
+package cloud.yogurt.shared.message;
+
+import cloud.yogurt.shared.logging.Logger;
+import cloud.yogurt.shared.network.DatagramServer;
+import cloud.yogurt.shared.network.Packet;
+import cloud.yogurt.shared.network.PacketException;
+import cloud.yogurt.shared.network.PacketHandler;
+import cloud.yogurt.shared.sharedconfig.SharedConfig;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+public abstract class MessageServer extends DatagramServer {
+    private MessagePacketHandler messagePacketHandler = null;
+    private static Logger log = Logger.getLogger(MessageServer.class.getName());
+
+    public abstract MessageHandler getMessageHandler();
+
+    public MessageServer() {
+        super();
+    }
+
+    public MessageServer(int port) {
+        super(port);
+    }
+
+    @Override
+    protected PacketHandler getPacketHandler() {
+        if (messagePacketHandler == null) {
+            messagePacketHandler = new MessagePacketHandler(this);
+        }
+        return messagePacketHandler;
+    }
+
+    public void sendMessage(SendingMessage message) throws IOException, PacketException {
+        SendMessageThread sendMessageThread = new SendMessageThread(message, this);
+        sendMessageThread.start();
+    }
+
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/message/NonPayloadSendingMessage.java <==
+package cloud.yogurt.shared.message;
+
+import cloud.yogurt.shared.header.Header;
+
+public abstract class NonPayloadSendingMessage extends PayloadSendingMessage {
+    public NonPayloadSendingMessage(Header header) {
+        super(header);
+    }
+
+    @Override
+    public MessageDataLoader getPayloadDataLoader() {
+        return new EmptyDataLoader();
+    }
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/message/PayloadSendingMessage.java <==
+package cloud.yogurt.shared.message;
+
+import java.io.IOException;
+import java.io.SequenceInputStream;
+import cloud.yogurt.shared.header.Header;
+
+public abstract class PayloadSendingMessage extends SendingMessage {
+    private Header header;
+
+    public PayloadSendingMessage(Header header) {
+        this.header = header;
+    }
+
+    public abstract MessageDataLoader getPayloadDataLoader();
+
+    public MessageDataLoader getMessageDataLoader() {
+        HeaderDataLoader headerDataLoader = new HeaderDataLoader(header);
+        return new CombineDataLoader(headerDataLoader, getPayloadDataLoader());
+    }
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/message/ReceivingMessage.java <==
+package cloud.yogurt.shared.message;
+
+import cloud.yogurt.shared.header.Header;
+import cloud.yogurt.shared.network.EndPoint;
+
+public class ReceivingMessage {
+    public int callId;
+    public EndPoint source;
+    public Header header;
+    public byte[] payload;
+
+    public ReceivingMessage(int callId, EndPoint endPoint, Header header, byte[] payload) {
+        this.callId = callId;
+        this.source = endPoint;
+        this.header = header;
+        this.payload = payload;
+    }
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/message/SendingMessage.java <==
+package cloud.yogurt.shared.message;
+
+import cloud.yogurt.shared.network.EndPoint;
+import cloud.yogurt.shared.network.Packet;
+import cloud.yogurt.shared.network.PacketSender;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * provides basic functionality for creating messages to send.
+ *
+ */
+public abstract class SendingMessage {
+    public abstract int getCallId();
+    public abstract EndPoint getTarget();
+    public abstract MessageDataLoader getMessageDataLoader();
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/message/SendMessageThread.java <==
+package cloud.yogurt.shared.message;
+
+import cloud.yogurt.shared.logging.Logger;
+import cloud.yogurt.shared.network.DatagramServer;
+import cloud.yogurt.shared.network.Packet;
+import cloud.yogurt.shared.network.PacketException;
+import cloud.yogurt.shared.sharedconfig.SharedConfig;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+public class SendMessageThread extends Thread {
+    private SendingMessage message;
+    private DatagramServer server;
+    public SendMessageThread(SendingMessage message, DatagramServer server) {
+        this.message = message;
+        this.server = server;
+    }
+
+    private static Logger log = Logger.getLogger(SendMessageThread.class.getName());
+
+    public void run() {
+        try {
+            log.info("Send message to " + message.getTarget().address + ":" + message.getTarget().port + ".");
+            MessageDataLoader loader = message.getMessageDataLoader();
+            List<Packet> packets = new ArrayList<>();
+            while (true) {
+                Packet packet = new Packet();
+                packet.callId = message.getCallId();
+                packet.endPoint = message.getTarget();
+                byte[] buffer = new byte[SharedConfig.MAX_PACKET_PAYLOAD];
+                int bytesRead = loader.read(buffer);
+                if (bytesRead <= 0) {
+                    break;
+                } else {
+                    log.debug("Read " + bytesRead + " bytes from data loader.");
+                    packet.content = new byte[bytesRead];
+                    System.arraycopy(buffer, 0, packet.content, 0, bytesRead);
+                }
+                packets.add(packet);
+            }
+            packets.get(packets.size() - 1).eomFlag = true;
+            for (Packet packet : packets) server.sendPacket(packet);
+            log.debug("Finish sending message.");
+        } catch (PacketException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/network/DatagramServer.java <==
+package cloud.yogurt.shared.network;
+
+import cloud.yogurt.shared.logging.Logger;
+
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.SocketException;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+
+import static cloud.yogurt.shared.sharedconfig.SharedConfig.*;
+
+/**
+ * The default sender and receiver for Yogurt packets.
+ *
+ * Currently the implementation for `sendPacket` is asynchronized, i.e.
+ * packet may not be sent after function returns.
+ */
+public abstract class DatagramServer extends Thread implements PacketSender {
+
+    private static Logger log = Logger.getLogger(DatagramServer.class.getName());
+
+    private boolean isStopped = false;
+
+    private int port;
+
+    private DatagramSocket socket;
+
+    private byte[] receiveBuffer = new byte[MAX_DATAGRAM];
+    private DatagramPacket receiveDatagram = new DatagramPacket(receiveBuffer, MAX_DATAGRAM);
+
+    private List<Packet> packetsToSend = new LinkedList<>();
+
+    private Map<EndPointCall, Long> sendId = new HashMap<>();
+    private Map<EndPointCall, Long> ackId = new HashMap<>();
+
+    protected abstract PacketHandler getPacketHandler();
+
+    /**
+     * Default constructor without specific port.
+     *
+     * This constructor is typical used by client, since it does not need to listen on a specific port.
+     */
+    public DatagramServer() {
+        this.port = 0;
+    }
+
+    /**
+     * The constructor with a specific port.
+     *
+     * @param port Which port would the server be listening on.
+     */
+    public DatagramServer(int port) {
+        this.port = port;
+    }
+
+    @Override
+    public void run() {
+        try {
+            if (this.port != 0) {
+                socket = new DatagramSocket(port);
+            } else {
+                // Create socket in any port.
+                socket = new DatagramSocket();
+            }
+        } catch (SocketException e) {
+            e.printStackTrace();
+        }
+        log.info("Socket server is listening at port " + socket.getLocalPort());
+        while (!isStopped) {
+            waitForDatagram();
+        }
+    }
+
+    public void stopServer() {
+        log.debug("Stopping datagram server on port " + this.socket.getLocalPort() + ".");
+        isStopped = true;
+        if (socket != null && !socket.isClosed()) {
+            socket.close();
+        }
+    }
+
+    private void waitForDatagram() {
+        log.debug("Waiting for incoming datagram.");
+
+        try {
+            socket.receive(receiveDatagram);
+            byte[] buffer = new byte[receiveDatagram.getLength()];
+            System.arraycopy(receiveDatagram.getData(), 0, buffer, 0, buffer.length);
+            Packet packet = new Packet();
+            packet.decodeDatagram(buffer);
+            packet.endPoint = new EndPoint();
+            packet.endPoint.address = receiveDatagram.getAddress();
+            packet.endPoint.port = receiveDatagram.getPort();
+
+            log.debug("Receive datagram size of " + buffer.length + " from " +
+                    packet.endPoint.address + ":" + packet.endPoint.port + "," +
+                    " Call=" + packet.callId +
+                    " Packet=" + packet.id +
+                    " ACK=" + packet.ackPacket);
+
+            if (setAckId(packet.endPoint, packet.callId, packet.id)) {
+                log.debug("Package is accepted.");
+                getPacketHandler().handlePacket(packet);
+                if (!packet.ackFlag) {
+                    sendAck(packet.endPoint, packet.callId);
+                }
+            } else {
+                log.debug("Package is dropped.");
+            }
+
+        }
+        catch (SocketException sc) {
+            log.error("Socket server is closed.");
+        }
+        catch (IOException | PacketException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private long getSendId(EndPoint endPoint, int call) {
+        EndPointCall endPointCall = new EndPointCall(endPoint, call);
+        if (sendId.get(endPointCall) != null) {
+            sendId.put(endPointCall, sendId.get(endPointCall) + 1);
+        }
+        else {
+            sendId.put(endPointCall, 1l);
+        }
+        return sendId.get(endPointCall) - 1;
+    }
+
+    private long getAckId(EndPoint endPoint, int call ) {
+        EndPointCall endPointCall = new EndPointCall(endPoint, call);
+        if (ackId.get(endPointCall) != null) {
+            return ackId.get(endPointCall);
+        }
+        return 0;
+    }
+
+    /**
+     * Set ACK
+     * @param endPoint
+     * @param call
+     * @param id
+     * @return true only if is receiving next frame.
+     */
+    private boolean setAckId(EndPoint endPoint, int call, long id) {
+        if (getAckId(endPoint, call) == id) {
+            EndPointCall endPointCall = new EndPointCall(endPoint, call);
+            ackId.put(endPointCall, id + 1);
+            return true;
+        }
+        return false;
+    }
+
+    private void sendAck(EndPoint endPoint, int call) throws PacketException {
+        Packet packet = new Packet();
+        packet.callId = call;
+        packet.endPoint = endPoint;
+        packet.ackFlag = true;
+        sendPacket(packet);
+    }
+
+    public void sendPacket(Packet packet) throws PacketException {
+        packet.id = getSendId(packet.endPoint, packet.callId);
+        packet.ackPacket = getAckId(packet.endPoint, packet.callId);
+        byte[] constructedPacket = packet.construct();
+        log.info("Send packet size " + constructedPacket.length + " to " +
+                packet.endPoint.address + ":" + packet.endPoint.port + "," +
+                " Call=" + packet.callId +
+                " Packet=" + packet.id +
+                " ACK=" + packet.ackPacket);
+        DatagramPacket sendingDatagram = new DatagramPacket(constructedPacket, constructedPacket.length);
+        sendingDatagram.setAddress(packet.endPoint.address);
+        sendingDatagram.setPort(packet.endPoint.port);
+        try {
+            socket.send(sendingDatagram);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/network/EndPoint.java <==
+package cloud.yogurt.shared.network;
+
+import java.net.InetAddress;
+
+public class EndPoint {
+    public InetAddress address;
+    public int port;
+
+    @Override
+    public String toString() {
+        return address.toString() + ":" + port;
+    }
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/network/EndPointCall.java <==
+package cloud.yogurt.shared.network;
+
+
+public class EndPointCall {
+    public EndPoint endPoint;
+    public int callId;
+
+    public EndPointCall(EndPoint endPoint, int call) {
+        this.endPoint = endPoint;
+        this.callId = call;
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        if (other instanceof EndPointCall) {
+            EndPointCall otherCall = (EndPointCall) other;
+            if (callId == otherCall.callId &&
+                    endPoint.address.equals(otherCall.endPoint.address) &&
+                    endPoint.port == otherCall.endPoint.port) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public int hashCode() {
+        return callId;
+    }
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/network/Packet.java <==
+package cloud.yogurt.shared.network;
+
+import java.net.InetAddress;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+
+import static cloud.yogurt.shared.sharedconfig.SharedConfig.*;
+
+public class Packet {
+
+    public EndPoint endPoint;
+
+    public long id;  // 4 bytes
+    public long ackPacket;  // 4 bytes
+
+    public int callId;  // 2 bytes
+    public boolean ackFlag;
+    public boolean resFlag;
+    public boolean eomFlag;
+
+    public byte[] content;
+
+    public byte[] construct() throws PacketException {
+        if (content == null) content = new byte[0];
+        if (content.length > MAX_PACKET_PAYLOAD) {
+            throw new PacketException("Packet payload size too large, actual = " + content.length);
+        }
+
+        byte[] datagram = new byte[PACKET_HEADER_SIZE + content.length];
+        System.arraycopy(getByteFromInteger(callId, 2), 0, datagram, 0, 2);
+
+        boolean[] bitFlags = new boolean[16];
+        bitFlags[0] = resFlag;
+        bitFlags[1] = ackFlag;
+        bitFlags[2] = eomFlag;
+        int bitFlagsInts = constructIntegerWithFlags(bitFlags);
+        System.arraycopy(getByteFromInteger(bitFlagsInts, 2), 0, datagram, 2, 2);
+
+        System.arraycopy(getByteFromInteger(id, 4), 0, datagram, 4, 4);
+        System.arraycopy(getByteFromInteger(ackPacket, 4), 0, datagram, 8, 4);
+
+        System.arraycopy(content, 0, datagram, 12, content.length);
+
+        return datagram;
+    }
+
+    private int constructIntegerWithFlags(boolean[] flags) {
+        int result = 0;
+        for (boolean flag : flags) {
+            result <<= 1;
+            result += flag ? 1 : 0;
+        }
+        return result;
+    }
+
+    private boolean[] getBitFromInteger(int number, int length) {
+        boolean[] flags = new boolean[length];
+        for (int i = length - 1; i >= 0; i--) {
+            flags[i] = number % 2 == 1;
+            number /= 2;
+        }
+        return flags;
+    }
+
+    private byte[] getByteFromInteger(long number, int length) throws PacketException {
+        if (number > ((long)1 << (length * 8))) {
+            throw new PacketException("Number out of bound. Maximum " + (1 << (length * 8)) + " found " + number);
+        }
+        byte[] result = new byte[length];
+        for (int i = length - 1; i >= 0; i--) {
+            result[i] = (byte) (number % (1 << 8));
+            number /= 1 << 8;
+        }
+        return result;
+    }
+
+    public void decodeDatagram(byte[] bytes) {
+        this.callId = readIntegerFromByte(bytes, 0, 2);
+        int flagInteger = readIntegerFromByte(bytes, 2, 2);
+        boolean[] flags = getBitFromInteger(flagInteger, 16);
+        this.resFlag = flags[0];
+        this.ackFlag = flags[1];
+        this.eomFlag = flags[2];
+
+        this.id = readIntegerFromByte(bytes, 4, 4);
+        this.ackPacket = readIntegerFromByte(bytes, 8, 4);
+
+        int contentLength = bytes.length - PACKET_HEADER_SIZE;
+        content = new byte[contentLength];
+        System.arraycopy(bytes, 12, content, 0, contentLength);
+    }
+
+    private int readIntegerFromByte(byte[] bytes, int start, int length) {
+        int result = 0;
+        for (int i = 0; i < length; i++) {
+            result <<= 8;
+            result += (int) bytes[i + start] & 0xff;  // Convert to an unsigned byte.
+        }
+        return result;
+    }
+
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/network/PacketException.java <==
+package cloud.yogurt.shared.network;
+
+import cloud.yogurt.shared.common.YogurtException;
+
+public class PacketException extends YogurtException {
+    public PacketException(String s) {
+        super("PacketException: " + s);
+    }
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/network/PacketHandler.java <==
+package cloud.yogurt.shared.network;
+
+import java.io.IOException;
+
+public interface PacketHandler {
+
+    void handlePacket(Packet packet) throws IOException, PacketException;
+
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/network/PacketSender.java <==
+package cloud.yogurt.shared.network;
+
+import cloud.yogurt.shared.network.Packet;
+import cloud.yogurt.shared.network.PacketException;
+
+/**
+ * Interface for anything that can send packets.
+ *
+ * The implementation of such sender should maintain a queue itself, if the
+ * `sendPacket` action is not synchronous.
+ */
+public interface PacketSender {
+    void sendPacket(Packet packet) throws PacketException;
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/sharedconfig/SharedConfig.java <==
+package cloud.yogurt.shared.sharedconfig;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+
+public class SharedConfig {
+    public static String CURRENT_API_VERSION = "YC1";
+    public static Charset HEADER_CHARSET = StandardCharsets.UTF_16;
+    public static Charset CONTENT_CHARSET = StandardCharsets.US_ASCII;
+
+    public static InetAddress SERVER_ADDRESS;
+    public static int SERVER_PORT = 3000;
+    public static int MAX_DATAGRAM = 1000;  // byte, default 65507
+    public static int PACKET_HEADER_SIZE = 4 * 3;
+    public static int MAX_PACKET_PAYLOAD = MAX_DATAGRAM - PACKET_HEADER_SIZE;
+
+    public static String CLIENT_BASE_PATH = System.getProperty("user.home") + "/YogurtCloud";
+    public static String SERVER_BASE_PATH = System.getProperty("user.home") + "/YogurtServer";
+
+    static {
+        try {
+            SERVER_ADDRESS = InetAddress.getByName("127.0.0.1");
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+==> ./shared/src/test/java/cloud/yogurt/shared/header/HeaderTest.java <==
+package cloud.yogurt.shared.header;
+
+import org.junit.After;
+import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.junit.Assert.*;
+
+public class HeaderTest {
+    Header header;
+
+    @After
+    public void prepareHeader() {
+        String string = header.toString();
+        Header after = Header.fromString(string);
+        System.out.println("HEADER\n" + string + "========");
+        assertEquals(string, after.toString());
+    }
+
+    @Test
+    public void test1() {
+        String params[] = {"GET", "test.txt"};
+        List<HeaderRow> rows = new ArrayList<>();
+        header = new Header(params, rows);
+    }
+
+    @Test
+    public void test2() {
+        String params[] = {"NOTICE"};
+        List<HeaderRow> rows = new ArrayList<>();
+        rows.add(new HeaderRow("abc", new HeaderStringValue("def")));
+        rows.add(new HeaderRow("abc", new HeaderIntegerValue(123)));
+        header = new Header(params, rows);
+    }
+}
+
+==> ./shared/src/test/java/cloud/yogurt/shared/message/HeaderDataLoaderTest.java <==
+package cloud.yogurt.shared.message;
+
+import cloud.yogurt.shared.header.Header;
+import org.junit.Test;
+
+import java.io.IOException;
+import java.util.ArrayList;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+public class HeaderDataLoaderTest {
+    @Test
+    public void test1() throws IOException {
+        HeaderDataLoader loader = new HeaderDataLoader(
+                new Header(new String[]{"GET", "test.txt"}, new ArrayList<>())
+        );
+
+        byte[] buffer = new byte[1000];
+        int read = loader.read(buffer);
+        assertEquals(read, 36);
+    }
+}
+
+==> ./shared/src/test/java/cloud/yogurt/shared/network/EndPointCallTest.java <==
+package cloud.yogurt.shared.network;
+
+import org.junit.Test;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
+import static org.junit.Assert.assertEquals;
+
+public class EndPointCallTest {
+    @Test
+    public void test() throws UnknownHostException {
+        EndPoint epA = new EndPoint();
+        epA.address = InetAddress.getByName("127.0.0.1");
+        epA.port = 12;
+        EndPointCall cA = new EndPointCall(epA, 4);
+        EndPoint epB = new EndPoint();
+        epB.address = InetAddress.getByName("127.0.0.1");
+        epB.port = 12;
+        EndPointCall cB = new EndPointCall(epB, 4);
+        assertEquals(cA, cB);
+    }
+}
+
+==> ./shared/src/test/java/cloud/yogurt/shared/network/PacketTest.java <==
+package cloud.yogurt.shared.network;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import static org.junit.Assert.*;
+
+public class PacketTest {
+
+    private Packet packet;
+
+    @Before
+    public void preparePacket() {
+        System.out.println("Create empty packet for testing.");
+        packet = new Packet();
+    }
+
+    @After
+    public void testPacket() throws PacketException {
+        Packet decodedPacket = new Packet();
+        decodedPacket.decodeDatagram(packet.construct());
+
+        System.out.println("Compare constructed packet with original one.");
+
+        assertEquals(packet.callId, decodedPacket.callId);
+        assertEquals(packet.eomFlag, decodedPacket.eomFlag);
+        assertEquals(packet.resFlag, decodedPacket.resFlag);
+        assertEquals(packet.ackFlag, decodedPacket.ackFlag);
+
+        assertEquals(packet.id, decodedPacket.id);
+        assertEquals(packet.ackPacket, decodedPacket.ackPacket);
+
+        assertEquals(packet.content.length, decodedPacket.content.length);
+        assertArrayEquals(packet.content, decodedPacket.content);
+
+        System.out.println("All tests passed.\n\n");
+    }
+
+    @Test
+    public void testPacketConstruct1() {
+        packet.callId = 5;
+        packet.eomFlag = true;
+        packet.resFlag = false;
+        packet.ackFlag = false;
+
+        packet.id = 123;
+        packet.ackPacket = 456;
+
+        packet.content = new byte[]{1, 2, 3, 4, 5};
+    }
+
+    @Test
+    public void testPacketConstruct2() {
+        packet.callId = 7;
+        packet.eomFlag = false;
+        packet.resFlag = true;
+        packet.ackFlag = false;
+
+        packet.id = 1234;
+        packet.ackPacket = 5678;
+
+        packet.content = new byte[]{1, 2, 3, 4, 5, 6};
+    }
+
+    @Test
+    public void testPacketConstruct3() {
+        packet.callId = 9;
+        packet.eomFlag = false;
+        packet.resFlag = false;
+        packet.ackFlag = true;
+
+        packet.id = 0;
+        packet.ackPacket = 1;
+
+        packet.content = new byte[]{1, 2, 3, 4, 5, 7};
+    }
+}
