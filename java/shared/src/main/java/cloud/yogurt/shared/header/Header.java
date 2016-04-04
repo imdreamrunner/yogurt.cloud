@@ -6,6 +6,10 @@ import cloud.yogurt.shared.sharedconfig.SharedConfig;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Header class
+ * Used to add at beginning of Packetss
+ */
 public class Header {
     private static Logger log = Logger.getLogger(Header.class.getName());
 
@@ -21,6 +25,11 @@ public class Header {
         return this.params;
     }
 
+    /**
+     * Get value of certain key in passed message
+     * @param key
+     * @return
+     */
     public HeaderValue getValue(String key) {
         for (HeaderRow row : headerRows) {
             if (row.key.equals(key)) {
@@ -30,6 +39,12 @@ public class Header {
         return null;
     }
 
+
+    /**
+     * Use simple append to contruct string content of header
+     * add new line for each row
+     * @return flatten header
+     */
     @Override
     public String toString() {
         StringBuffer headerString = new StringBuffer(SharedConfig.CURRENT_API_VERSION);
@@ -48,6 +63,11 @@ public class Header {
     }
 
 
+    /**
+     * Get header from passed string
+     * @param string
+     * @return header object
+     */
     public static Header fromString(String string) {
         String[] lines = string.split("\n");
         String[] firstLines = lines[0].split(" ");
