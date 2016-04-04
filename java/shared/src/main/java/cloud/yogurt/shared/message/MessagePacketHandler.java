@@ -32,6 +32,11 @@ public class MessagePacketHandler implements PacketHandler {
         }
     }
 
+    /**
+     * 
+     * @throws IOException
+     * @throws PacketException
+     */
     synchronized private void consumePackets() throws IOException, PacketException {
         int dataSize = 0;
         for (Packet packet : receiveBuffer) {
