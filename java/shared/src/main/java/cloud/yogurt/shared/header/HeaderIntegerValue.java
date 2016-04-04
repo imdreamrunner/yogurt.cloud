@@ -1,5 +1,8 @@
 package cloud.yogurt.shared.header;
 
+/**
+ * Integer value in headers
+ */
 public class HeaderIntegerValue extends HeaderValue {
     private long value;
 
