@@ -10,6 +10,9 @@ import cloud.yogurt.shared.network.PacketException;
 import java.io.IOException;
 import java.net.InetAddress;
 
+/**
+ * A class representing the remote server of the client.
+ */
 public class RemoteServer extends EndPoint {
     private MessageServer messageServer;
     private ServerMessageHandler messageHandler;

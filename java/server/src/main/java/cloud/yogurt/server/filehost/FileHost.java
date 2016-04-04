@@ -15,6 +15,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Interfaces for all file related APIs.
+ */
 public class FileHost {
     private static Logger log = Logger.getLogger(FileHost.class.getName());
 

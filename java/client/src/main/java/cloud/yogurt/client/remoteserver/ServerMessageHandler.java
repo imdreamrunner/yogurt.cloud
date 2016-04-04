@@ -10,6 +10,9 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Handle the message from server.
+ */
 public class ServerMessageHandler implements MessageHandler {
     private static Logger log = Logger.getLogger(ServerMessageHandler.class.getName());
 

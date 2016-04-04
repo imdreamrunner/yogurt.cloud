@@ -10,6 +10,9 @@ import cloud.yogurt.shared.network.PacketException;
 import java.io.IOException;
 import java.util.ArrayList;
 
+/**
+ * A class holding information to be executed after file change event.
+ */
 public class FileChangeMonitor {
     private static Logger log = Logger.getLogger(FileChangeMonitor.class.getName());
 

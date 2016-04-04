@@ -6,6 +6,9 @@ import cloud.yogurt.shared.network.EndPointCall;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * A class to filter duplicate service call from the same client.
+ */
 public class DuplicateFilter {
     private Map<EndPointCall, Long> cache = new HashMap<>();
 

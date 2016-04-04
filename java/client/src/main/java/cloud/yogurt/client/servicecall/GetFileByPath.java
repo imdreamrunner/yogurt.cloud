@@ -7,6 +7,9 @@ import cloud.yogurt.shared.header.HeaderRow;
 
 import java.util.ArrayList;
 
+/**
+ * Service call to get content of a file.
+ */
 public class GetFileByPath extends ServiceCall {
     public GetFileByPath(String path) {
         super(new Header(new String[]{"GET", path}, new ArrayList<>()));

@@ -8,6 +8,9 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+/**
+ * A data loader for file in file host.
+ */
 public class FileResolver extends MessageDataLoader {
 
     private File file;

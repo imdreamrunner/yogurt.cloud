@@ -6,6 +6,9 @@ import cloud.yogurt.shared.header.HeaderRow;
 
 import java.util.ArrayList;
 
+/**
+ * Service call to monitor the change of a file.
+ */
 public class MonitorFileChange extends ServiceCall {
     public MonitorFileChange(String filename, int duration) {
         super(new Header(
