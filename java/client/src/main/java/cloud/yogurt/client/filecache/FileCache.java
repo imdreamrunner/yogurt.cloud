@@ -3,6 +3,9 @@ package cloud.yogurt.client.filecache;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * A simple client side cache for content of file.
+ */
 public class FileCache {
 
     private Map<String, byte[]> fileContent = new HashMap<>();

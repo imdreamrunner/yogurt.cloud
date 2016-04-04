@@ -9,6 +9,9 @@ import cloud.yogurt.shared.network.PacketException;
 
 import java.io.IOException;
 
+/**
+ * Handle the content of file received from the server.
+ */
 public class FileContentHandler implements MessageHandler {
     private Logger log = Logger.getLogger(FileContentHandler.class.getName());
 
@@ -20,6 +23,12 @@ public class FileContentHandler implements MessageHandler {
         this.cache = cache;
     }
 
+    /**
+     * Handle the receiving message from the server.
+     * @param receivingMessage the message just received.
+     * @throws IOException
+     * @throws PacketException
+     */
     @Override
     public void handleMessage(ReceivingMessage receivingMessage) throws IOException, PacketException {
         log.info("Handle file content, and update cache.");

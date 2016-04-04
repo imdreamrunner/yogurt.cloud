@@ -11,6 +11,10 @@ import cloud.yogurt.shared.sharedconfig.SharedConfig;
 import java.io.IOException;
 import java.util.Scanner;
 
+
+/**
+ * Entry point to YogurtCloud client application.
+ */
 public class YogurtClient {
     private static Logger log = Logger.getLogger(YogurtClient.class.getName());
 

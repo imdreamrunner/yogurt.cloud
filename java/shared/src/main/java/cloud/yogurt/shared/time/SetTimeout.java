@@ -1,5 +1,8 @@
 package cloud.yogurt.shared.time;
 
+/**
+ * Helper class to execute a handler after a duration of time.
+ */
 public class SetTimeout extends Thread {
 
     private long duration;
