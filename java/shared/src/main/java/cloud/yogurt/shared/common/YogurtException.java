@@ -1,5 +1,8 @@
 package cloud.yogurt.shared.common;
 
+/**
+ * Yogurt Exception extends exceptions
+ */
 public class YogurtException extends Exception {
     private int error;
 
