@@ -11,6 +11,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Message server that acts as a wrapper of UDP servers
+ */
 public abstract class MessageServer extends DatagramServer {
     private MessagePacketHandler messagePacketHandler = null;
     private static Logger log = Logger.getLogger(MessageServer.class.getName());
@@ -32,7 +35,12 @@ public abstract class MessageServer extends DatagramServer {
         }
         return messagePacketHandler;
     }
-
+    /**
+     * Create thread and send message
+     * @param message
+     * @throws IOException
+     * @throws PacketException
+     */
     public void sendMessage(SendingMessage message) throws IOException, PacketException {
         SendMessageThread sendMessageThread = new SendMessageThread(message, this);
         sendMessageThread.start();
