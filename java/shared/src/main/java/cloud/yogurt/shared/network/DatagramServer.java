@@ -83,6 +83,10 @@ public abstract class DatagramServer extends Thread implements PacketSender {
         }
     }
 
+    /**
+     * Server waits for user datagram
+     *  with message control
+     */
     private void waitForDatagram() {
         log.debug("Waiting for incoming datagram.");
 
@@ -157,6 +161,12 @@ public abstract class DatagramServer extends Thread implements PacketSender {
         return false;
     }
 
+    /**
+     * Simple packet with ACK included
+     * @param endPoint
+     * @param call
+     * @throws PacketException
+     */
     private void sendAck(EndPoint endPoint, int call) throws PacketException {
         Packet packet = new Packet();
         packet.callId = call;
@@ -165,6 +175,16 @@ public abstract class DatagramServer extends Thread implements PacketSender {
         sendPacket(packet);
     }
 
+    /**
+     * Send packet
+     *  set packet id
+     *      ack packet id
+     *  construct packet
+     *      log message transmission
+     * use datagram socket
+     * @param packet reference for packet construction
+     * @throws PacketException
+     */
     public void sendPacket(Packet packet) throws PacketException {
         packet.id = getSendId(packet.endPoint, packet.callId);
         packet.ackPacket = getAckId(packet.endPoint, packet.callId);
