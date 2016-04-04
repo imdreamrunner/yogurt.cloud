@@ -10,7 +10,9 @@ fi
 
 mkdir combined
 
-find . -type f \( -name "*.gradle" \) -exec tail -n +1 "$file" {} + > combined/code.txt 2> /dev/null
+cat README.md > combined/code.txt
+
+find . -type f \( -name "*.gradle" \) -exec tail -n +1 "$file" {} + >> combined/code.txt 2> /dev/null
 find . -type f \( -name "*.java" \) -exec tail -n +1 "$file" {} + >> combined/code.txt 2> /dev/null
 
 echo "Done."

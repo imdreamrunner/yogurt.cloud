@@ -1,3 +1,18 @@
+This is the source code for the Distributed File System implemented by
+
+* Zhou Xinzi
+* Hou Yunqing
+* Lu Shengliang
+
+, where names are sorted in total length,
+and also in reversely sorted in length of surname.
+
+This is a Java project built by Gradle. The Gradle files are come in
+first and then the Java source codes.
+
+Note: The name of the file is printed between "==>" and "<==" before
+the content of the file.
+
 ==> ./client/build.gradle <==
 group 'cloud.yogurt'
 version '1.0-SNAPSHOT'
@@ -68,6 +83,8 @@ dependencies {
 }==> ./client/src/main/java/cloud/yogurt/client/cmd/YogurtClient.java <==
 package cloud.yogurt.client.cmd;
 
+import cloud.yogurt.client.filecache.FileCache;
+import cloud.yogurt.client.remoteserver.FileContentHandler;
 import cloud.yogurt.client.remoteserver.RemoteServer;
 import cloud.yogurt.client.servicecall.*;
 import cloud.yogurt.shared.logging.Logger;
@@ -81,6 +98,8 @@ public class YogurtClient {
     private static Logger log = Logger.getLogger(YogurtClient.class.getName());
 
     private static RemoteServer server;
+
+    private static FileCache fileCache = new FileCache();
 
     public static void main(String[] args) throws IOException, PacketException {
         log.info("Starting Yogurt Client");
@@ -108,7 +127,14 @@ public class YogurtClient {
                 case "get": {
                     String path = components[1];
                     log.info("Trying to get " + path + " from server.");
-                    makeServiceCall(new GetFileByPath(path));
+                    if (fileCache.getCache(path) == null) {
+                        int callId = makeServiceCall(new GetFileByPath(path));
+                        FileContentHandler fileContentHandler = new FileContentHandler(path, fileCache);
+                        server.getMessageHandler().registerHandler(callId, fileContentHandler);
+                    } else {
+                        System.out.println("File in cache:");
+                        System.out.println(new String(fileCache.getCache(path), SharedConfig.CONTENT_CHARSET));
+                    }
                     break;
                 }
                 case "insert": {
@@ -134,12 +160,75 @@ public class YogurtClient {
                     makeServiceCall(new DeleteRange(path, offset, length));
                     break;
                 }
+                case "check": {
+                    String path = components[1];
+                    log.info("Trying to check " + path + ".");
+                    makeServiceCall(new CheckFileStatus(path));
+                    break;
+                }
             }
         }
     }
 
-    private static void makeServiceCall(ServiceCall call) throws IOException, PacketException {
-        server.makeServiceCall(call);
+    private static int makeServiceCall(ServiceCall call) throws IOException, PacketException {
+        return server.makeServiceCall(call);
+    }
+}
+
+==> ./client/src/main/java/cloud/yogurt/client/filecache/FileCache.java <==
+package cloud.yogurt.client.filecache;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class FileCache {
+
+    private Map<String, byte[]> fileContent = new HashMap<>();
+    private Map<String, Long> modifyTime = new HashMap<>();
+    private Map<String, Long> syncTIme = new HashMap<>();
+
+    public void updateCache(String file, byte[] data, long updateTime) {
+        fileContent.put(file,  data);
+    }
+
+    public byte[] getCache(String file) {
+        if (fileContent.get(file) != null)  {
+            return fileContent.get(file);
+        }
+        return null;
+    }
+
+}
+
+==> ./client/src/main/java/cloud/yogurt/client/remoteserver/FileContentHandler.java <==
+package cloud.yogurt.client.remoteserver;
+
+import cloud.yogurt.client.filecache.FileCache;
+import cloud.yogurt.shared.header.HeaderIntegerValue;
+import cloud.yogurt.shared.logging.Logger;
+import cloud.yogurt.shared.message.MessageHandler;
+import cloud.yogurt.shared.message.ReceivingMessage;
+import cloud.yogurt.shared.network.PacketException;
+
+import java.io.IOException;
+
+public class FileContentHandler implements MessageHandler {
+    private Logger log = Logger.getLogger(FileContentHandler.class.getName());
+
+    String filename;
+    FileCache cache;
+
+    public FileContentHandler(String filename, FileCache cache) {
+        this.filename = filename;
+        this.cache = cache;
+    }
+
+    @Override
+    public void handleMessage(ReceivingMessage receivingMessage) throws IOException, PacketException {
+        log.info("Handle file content, and update cache.");
+        this.cache.updateCache(filename,
+                receivingMessage.payload,
+                ((HeaderIntegerValue)receivingMessage.header.getValue("LastModify")).getValue());
     }
 }
 
@@ -175,13 +264,18 @@ public class RemoteServer extends EndPoint {
         this.messageServer.start();
     }
 
-    public void makeServiceCall(ServiceCall serviceCall) throws IOException, PacketException {
+    public int makeServiceCall(ServiceCall serviceCall) throws IOException, PacketException {
         serviceCall.setTarget(this);
         this.messageServer.sendMessage(serviceCall);
+        return serviceCall.getCallId();
     }
 
     public void stop() {
         this.messageServer.stopServer();
+    }
+
+    public ServerMessageHandler getMessageHandler() {
+        return messageHandler;
     }
 }
 
@@ -191,18 +285,33 @@ package cloud.yogurt.client.remoteserver;
 import cloud.yogurt.shared.logging.Logger;
 import cloud.yogurt.shared.message.MessageHandler;
 import cloud.yogurt.shared.message.ReceivingMessage;
+import cloud.yogurt.shared.network.PacketException;
 import cloud.yogurt.shared.sharedconfig.SharedConfig;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ServerMessageHandler implements MessageHandler {
     private static Logger log = Logger.getLogger(ServerMessageHandler.class.getName());
 
+    private Map<Integer, MessageHandler> handlers = new HashMap<>();
+
     @Override
-    public void handleMessage(ReceivingMessage receivingMessage) {
+    public void handleMessage(ReceivingMessage receivingMessage) throws IOException, PacketException {
         log.debug("Receive message from server.");
         log.debug("Message header:\n" + receivingMessage.header.toString());
 
         String result = new String(receivingMessage.payload, SharedConfig.CONTENT_CHARSET);
         System.out.println("Server Response:\n" + result);
+
+        if (handlers.get(receivingMessage.callId) != null) {
+            handlers.get(receivingMessage.callId).handleMessage(receivingMessage);
+        }
+    }
+
+    public void registerHandler(int callId, MessageHandler serverMessageHandler) {
+        handlers.put(callId, serverMessageHandler);
     }
 }
 
@@ -263,6 +372,7 @@ public class GetFileByPath extends ServiceCall {
                 add(new HeaderRow("Limit", new HeaderIntegerValue(limit)));
             }
         }));
+
     }
 }
 
@@ -398,15 +508,6 @@ public class RemoveServerTest {
     }
 }
 
-==> ./server/src/main/java/cloud/yogurt/server/clientpacket/ClientPacket.java <==
-package cloud.yogurt.server.clientpacket;
-
-import cloud.yogurt.shared.network.Packet;
-
-public class ClientPacket extends Packet {
-
-}
-
 ==> ./server/src/main/java/cloud/yogurt/server/cmd/YogurtServer.java <==
 package cloud.yogurt.server.cmd;
 
@@ -415,15 +516,40 @@ import cloud.yogurt.server.serverhost.ServerHost;
 import java.io.IOException;
 
 public class YogurtServer {
+    private static ServerHost host;
+
     public static void main(String[] args) throws IOException {
 
-        ServerHost host = ServerHost.getInstance();
+        host = ServerHost.getInstance();
         host.run();
 
         System.out.println("Press any key to stop.");
         int ignored = System.in.read();
 
         host.stop();
+        System.out.println("Bye.");
+    }
+}
+
+==> ./server/src/main/java/cloud/yogurt/server/dulplicatefilter/DuplicateFilter.java <==
+package cloud.yogurt.server.dulplicatefilter;
+
+import cloud.yogurt.shared.network.EndPoint;
+import cloud.yogurt.shared.network.EndPointCall;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class DuplicateFilter {
+    private Map<EndPointCall, Long> cache = new HashMap<>();
+
+    public void mark(EndPointCall endPointCall) {
+        long time = System.currentTimeMillis() / 1000L;
+        cache.put(endPointCall, time);
+    }
+
+    public boolean isDuplicate(EndPointCall endPointCall) {
+        return cache.get(endPointCall) != null;
     }
 }
 
@@ -433,14 +559,10 @@ package cloud.yogurt.server.filehost;
 import cloud.yogurt.server.serverhost.ServerHost;
 import cloud.yogurt.server.serverhost.ServerResponse;
 import cloud.yogurt.shared.header.Header;
-import cloud.yogurt.shared.header.HeaderRow;
 import cloud.yogurt.shared.logging.Logger;
-import cloud.yogurt.shared.message.EmptyDataLoader;
-import cloud.yogurt.shared.message.NonPayloadSendingMessage;
 import cloud.yogurt.shared.network.EndPoint;
 import cloud.yogurt.shared.network.PacketException;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -565,7 +687,7 @@ public class FileHost {
     }
 
     public long getLastModify(String filename) {
-        File file = new File(filename);
+        File file = new File(SharedConfig.SERVER_BASE_PATH + "/" + filename);
         return file.lastModified();
     }
 }
@@ -608,21 +730,10 @@ public class FileResolver extends MessageDataLoader {
     }
 }
 
-==> ./server/src/main/java/cloud/yogurt/server/serverclient/ServerClient.java <==
-package cloud.yogurt.server.serverclient;
-
-public class ServerClient {
-}
-
-==> ./server/src/main/java/cloud/yogurt/server/serverconfig/ServerConfig.java <==
-package cloud.yogurt.server.serverconfig;
-
-public class ServerConfig {
-}
-
 ==> ./server/src/main/java/cloud/yogurt/server/serverhost/ClientMessageHandler.java <==
 package cloud.yogurt.server.serverhost;
 
+import cloud.yogurt.server.dulplicatefilter.DuplicateFilter;
 import cloud.yogurt.server.filehost.FileHost;
 import cloud.yogurt.server.filehost.FileResolver;
 import cloud.yogurt.shared.header.Header;
@@ -632,6 +743,8 @@ import cloud.yogurt.shared.logging.Logger;
 import cloud.yogurt.shared.message.EmptyDataLoader;
 import cloud.yogurt.shared.message.MessageHandler;
 import cloud.yogurt.shared.message.ReceivingMessage;
+import cloud.yogurt.shared.network.EndPoint;
+import cloud.yogurt.shared.network.EndPointCall;
 import cloud.yogurt.shared.network.PacketException;
 
 import java.io.FileNotFoundException;
@@ -644,10 +757,20 @@ public class ClientMessageHandler implements MessageHandler {
     }
     private static Logger log = Logger.getLogger(ClientMessageHandler.class.getName());
     private static FileHost fileHost = new FileHost();
+    private static DuplicateFilter filter = new DuplicateFilter();
 
     @Override
     public void handleMessage(ReceivingMessage receivingMessage) throws IOException, PacketException {
-        log.debug("Receive message from client.");
+        EndPointCall endPointCall = new EndPointCall(receivingMessage.source, receivingMessage.callId);
+
+        log.debug("Receive message from client " + endPointCall + ".");
+
+        if (filter.isDuplicate(endPointCall)) {
+            log.info("Receive duplicate call " + endPointCall
+                    + ". Drop call.");
+            return;
+        }
+        filter.mark(new EndPointCall(receivingMessage.source, receivingMessage.callId));
 
         String action = receivingMessage.header.getParams()[0];
 
@@ -656,7 +779,14 @@ public class ClientMessageHandler implements MessageHandler {
                 String path = receivingMessage.header.getParams()[1];
                 try {
                     FileResolver fileResolver = fileHost.get(path);
-                    Header header = new Header(new String[]{"STATUS", "SUCCESS"}, new ArrayList<>());
+                    Header header = new Header(new String[]{"STATUS", "SUCCESS"}, new ArrayList<HeaderRow>(){
+                        {
+                            {
+                                add(new HeaderRow("LastModify",
+                                        new HeaderIntegerValue( fileHost.getLastModify(path))));
+                            }
+                        }
+                    });
                     ServerResponse response = new ServerResponse(receivingMessage.callId, header,
                             fileResolver, receivingMessage.source);
                     this.getServerHostThread().sendMessage(response);
@@ -700,7 +830,7 @@ public class ClientMessageHandler implements MessageHandler {
                 String path = receivingMessage.header.getParams()[1];
                 boolean exist;
                 try {
-                    FileResolver fileResolver = fileHost.get(path);
+                    fileHost.get(path);
                     exist = true;
                 } catch (FileNotFoundException unused) {
                     exist = false;
@@ -712,6 +842,11 @@ public class ClientMessageHandler implements MessageHandler {
                                     new HeaderIntegerValue( fileHost.getLastModify(path))));
                         }
                     });
+                    ServerResponse response = new ServerResponse(receivingMessage.callId, header,
+                            new EmptyDataLoader(), receivingMessage.source);
+                    this.getServerHostThread().sendMessage(response);
+                } else {
+                    Header header = new Header(new String[]{"STATUS", "ERROR"}, new ArrayList<>());
                     ServerResponse response = new ServerResponse(receivingMessage.callId, header,
                             new EmptyDataLoader(), receivingMessage.source);
                     this.getServerHostThread().sendMessage(response);
@@ -953,7 +1088,7 @@ public class Header {
                 String value = keyValuePair[1];
                 HeaderValue headerValue;
                 try {
-                    int intValue = Integer.parseInt(value);
+                    long intValue = Long.parseUnsignedLong(value);
                     headerValue = new HeaderIntegerValue(intValue);
                 } catch (NumberFormatException ignored) {
                     headerValue = new HeaderStringValue(value);
@@ -1283,8 +1418,8 @@ public class MessagePacketHandler implements PacketHandler {
         byte[] payload = new byte[dataSize - payloadOffset];
         System.arraycopy(data, payloadOffset, payload, 0, payload.length);
 
-        int callId = receiveBuffer.get(0).callId;
-        EndPoint source = receiveBuffer.get(0).endPoint;
+        int callId = receiveBuffer.get(receiveBuffer.size() - 1).callId;
+        EndPoint source = receiveBuffer.get(receiveBuffer.size() - 1).endPoint;
 
         ReceivingMessage message = new ReceivingMessage(callId, source, header, payload);
         server.getMessageHandler().handleMessage(message);
@@ -1701,6 +1836,10 @@ public class EndPointCall {
     public int hashCode() {
         return callId;
     }
+
+    public String toString() {
+        return this.endPoint.toString() + "->" + callId;
+    }
 }
 
 ==> ./shared/src/main/java/cloud/yogurt/shared/network/Packet.java <==
@@ -1874,6 +2013,41 @@ public class SharedConfig {
             e.printStackTrace();
         }
     }
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/time/SetTimeout.java <==
+package cloud.yogurt.shared.time;
+
+public class SetTimeout extends Thread {
+
+    private long duration;
+    private TimeoutHandler timeoutHandler;
+
+    public SetTimeout(TimeoutHandler timeoutHandler, long duration) {
+        this.timeoutHandler = timeoutHandler;
+    }
+
+    @Override
+    public void run() {
+        try {
+            Thread.sleep(duration);
+            this.timeoutHandler.handleTimeout();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void setTimeout(TimeoutHandler timeoutHandler, long duration) {
+        new SetTimeout(timeoutHandler, duration).start();
+    }
+
+}
+
+==> ./shared/src/main/java/cloud/yogurt/shared/time/TimeoutHandler.java <==
+package cloud.yogurt.shared.time;
+
+public interface TimeoutHandler {
+    void handleTimeout();
 }
 
 ==> ./shared/src/test/java/cloud/yogurt/shared/header/HeaderTest.java <==

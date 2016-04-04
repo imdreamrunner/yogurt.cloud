@@ -5,9 +5,11 @@ import cloud.yogurt.server.serverhost.ServerHost;
 import java.io.IOException;
 
 public class YogurtServer {
+    private static ServerHost host;
+
     public static void main(String[] args) throws IOException {
 
-        ServerHost host = ServerHost.getInstance();
+        host = ServerHost.getInstance();
         host.run();
 
         System.out.println("Press any key to stop.");
