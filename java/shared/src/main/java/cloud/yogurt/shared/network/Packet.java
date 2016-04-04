@@ -6,6 +6,14 @@ import java.nio.ByteOrder;
 
 import static cloud.yogurt.shared.sharedconfig.SharedConfig.*;
 
+/**
+ * Packet class
+ *  contains EndPoint indicator
+ *  Packet ID, Ack Pack ID;
+ *  Call ID, Flags
+ *  
+ *  Lower layer transmission carrier.
+ */
 public class Packet {
 
     public EndPoint endPoint;
@@ -20,6 +28,12 @@ public class Packet {
 
     public byte[] content;
 
+    /**
+     * Packet constuction function
+     *  takes packet header and content
+     * @return datagram packet
+     * @throws PacketException
+     */
     public byte[] construct() throws PacketException {
         if (content == null) content = new byte[0];
         if (content.length > MAX_PACKET_PAYLOAD) {
@@ -43,7 +57,11 @@ public class Packet {
 
         return datagram;
     }
-
+    /**
+     *
+     * @param flags
+     * @return
+     */
     private int constructIntegerWithFlags(boolean[] flags) {
         int result = 0;
         for (boolean flag : flags) {
@@ -53,6 +71,12 @@ public class Packet {
         return result;
     }
 
+    /**
+     *
+     * @param number
+     * @param length
+     * @return
+     */
     private boolean[] getBitFromInteger(int number, int length) {
         boolean[] flags = new boolean[length];
         for (int i = length - 1; i >= 0; i--) {
@@ -62,6 +86,13 @@ public class Packet {
         return flags;
     }
 
+    /**
+     *
+     * @param number
+     * @param length
+     * @return
+     * @throws PacketException
+     */
     private byte[] getByteFromInteger(long number, int length) throws PacketException {
         if (number > ((long)1 << (length * 8))) {
             throw new PacketException("Number out of bound. Maximum " + (1 << (length * 8)) + " found " + number);
@@ -74,6 +105,13 @@ public class Packet {
         return result;
     }
 
+    /**
+     * Datagram decode function
+     * 
+     * @param bytes
+     * 
+     * return packet message to class abtributes
+     */
     public void decodeDatagram(byte[] bytes) {
         this.callId = readIntegerFromByte(bytes, 0, 2);
         int flagInteger = readIntegerFromByte(bytes, 2, 2);
@@ -90,6 +128,13 @@ public class Packet {
         System.arraycopy(bytes, 12, content, 0, contentLength);
     }
 
+    /**
+     * Decode flatten integer from bytes
+     * @param bytes
+     * @param start
+     * @param length
+     * @return integer value
+     */
     private int readIntegerFromByte(byte[] bytes, int start, int length) {
         int result = 0;
         for (int i = 0; i < length; i++) {
