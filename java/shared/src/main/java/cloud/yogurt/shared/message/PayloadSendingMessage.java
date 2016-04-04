@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.io.SequenceInputStream;
 import cloud.yogurt.shared.header.Header;
 
+/**
+ * Payload message sending with combined data loader
+ */
 public abstract class PayloadSendingMessage extends SendingMessage {
     private Header header;
 
