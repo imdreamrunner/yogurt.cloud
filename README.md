@@ -58,7 +58,7 @@ First line:
 For examples:
 
 	# For Request
-	YC1 READ /path/to/file.txt
+	YC1 GET /path/to/file.txt
 	YC1 INSERT /path/to/file.txt
 	YC1 MONITOR /path/to/file.txt
 	YC1 DELETE /path/to/file.txt
