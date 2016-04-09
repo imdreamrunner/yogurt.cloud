@@ -19,6 +19,8 @@ public class SharedConfig {
     public static String CLIENT_BASE_PATH = System.getProperty("user.home") + "/YogurtCloud";
     public static String SERVER_BASE_PATH = System.getProperty("user.home") + "/YogurtServer";
 
+    public static long RESENT_TIMEOUT = 200;
+
     static {
         try {
             SERVER_ADDRESS = InetAddress.getByName("127.0.0.1");

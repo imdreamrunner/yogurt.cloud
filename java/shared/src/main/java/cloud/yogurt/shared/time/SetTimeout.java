@@ -10,6 +10,7 @@ public class SetTimeout extends Thread {
 
     public SetTimeout(TimeoutHandler timeoutHandler, long duration) {
         this.timeoutHandler = timeoutHandler;
+        this.duration = duration;
     }
 
     @Override

@@ -144,4 +144,8 @@ public class Packet {
         return result;
     }
 
+    public String toString() {
+        return "<Packet " + id + " to " + endPoint + "->" + callId + " size:" + content.length + ">";
+    }
+
 }

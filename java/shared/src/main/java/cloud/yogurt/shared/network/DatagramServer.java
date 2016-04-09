@@ -1,6 +1,7 @@
 package cloud.yogurt.shared.network;
 
 import cloud.yogurt.shared.logging.Logger;
+import cloud.yogurt.shared.time.SetTimeout;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -48,8 +49,6 @@ public abstract class DatagramServer extends Thread implements PacketSender {
      * As a sender, next packet ID to be received by receiver.
      */
     private Map<EndPointCall, Long> receivedId = new HashMap<>();
-
-    private Map<EndPointCall, SendBuffer> sendBufferMap = new HashMap<>();
 
     protected abstract PacketHandler getPacketHandler();
 
@@ -160,7 +159,7 @@ public abstract class DatagramServer extends Thread implements PacketSender {
     }
 
     /**
-     * Set ACK
+     * Store accepted packets from sender locally.
      * @param endPoint
      * @param call
      * @param id
@@ -206,14 +205,13 @@ public abstract class DatagramServer extends Thread implements PacketSender {
         }
     }
 
-    private void bufferPacket(Packet packet) {
-        EndPointCall endPointCall = new EndPointCall(packet.endPoint, packet.callId);
-        SendBuffer sendBuffer = sendBufferMap.get(endPointCall);
-        if (sendBuffer == null) {
-            sendBuffer = new SendBuffer();
-            sendBufferMap.put(endPointCall, sendBuffer);
+    public boolean isPacketReceived(Packet packet) {
+        if (getReceivedId(packet.endPoint, packet.callId) > packet.id) {
+            log.debug("CHECK_PACKET_RECEIVED", packet.toString() + " is received.");
+            return true;
         }
-        sendBuffer.bufferPacket(packet);
+        log.debug("CHECK_PACKET_RECEIVED", packet.toString() + " is not received.");
+        return false;
     }
 
     /**
@@ -232,15 +230,14 @@ public abstract class DatagramServer extends Thread implements PacketSender {
         }
         packet.ackPacket = getAckId(packet.endPoint, packet.callId);
         byte[] constructedPacket = packet.construct();
-        log.info("Send packet size " + constructedPacket.length + " to " +
-                packet.endPoint.address + ":" + packet.endPoint.port + "," +
-                " Call=" + packet.callId +
-                " Packet=" + packet.id +
-                " ACK=" + packet.ackPacket);
         DatagramPacket sendingDatagram = new DatagramPacket(constructedPacket, constructedPacket.length);
         sendingDatagram.setAddress(packet.endPoint.address);
         sendingDatagram.setPort(packet.endPoint.port);
+        if (!packet.ackFlag) {
+            SetTimeout.setTimeout(new ResendPacket(packet, this), RESENT_TIMEOUT);
+        }
         try {
+            log.info("Send packet " + packet.toString());
             socket.send(sendingDatagram);
         } catch (IOException e) {
             e.printStackTrace();
