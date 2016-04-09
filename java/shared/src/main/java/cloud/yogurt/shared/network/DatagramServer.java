@@ -210,7 +210,7 @@ public abstract class DatagramServer extends Thread implements PacketSender {
             log.debug("CHECK_PACKET_RECEIVED", packet.toString() + " is received.");
             return true;
         }
-        log.debug("CHECK_PACKET_RECEIVED", packet.toString() + " is not received.");
+//        log.debug("CHECK_PACKET_RECEIVED", packet.toString() + " is not received.");
         return false;
     }
 

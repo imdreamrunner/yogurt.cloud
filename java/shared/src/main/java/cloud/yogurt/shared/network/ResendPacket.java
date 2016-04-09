@@ -31,7 +31,7 @@ public class ResendPacket implements TimeoutHandler {
                     log.info("TIMEOUT_RESEND", "Resent packet " + packet + " after timeout. Retry = " + retry);
                     this.datagramServer.sendPacket(this.packet, retry);
                 } else {
-                    SetTimeout.setTimeout(this, 10);
+                    SetTimeout.setTimeout(this, 5);
                 }
             } catch (PacketException e) {
                 e.printStackTrace();
