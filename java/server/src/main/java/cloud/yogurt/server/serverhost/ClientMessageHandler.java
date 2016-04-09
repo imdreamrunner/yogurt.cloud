@@ -8,10 +8,10 @@ import cloud.yogurt.shared.header.HeaderIntegerValue;
 import cloud.yogurt.shared.header.HeaderRow;
 import cloud.yogurt.shared.logging.Logger;
 import cloud.yogurt.shared.message.EmptyDataLoader;
+import cloud.yogurt.shared.message.MessageDataLoader;
 import cloud.yogurt.shared.message.MessageHandler;
 import cloud.yogurt.shared.message.ReceivingMessage;
 import cloud.yogurt.shared.network.EndPointCall;
-import cloud.yogurt.shared.network.PacketException;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -28,8 +28,35 @@ public class ClientMessageHandler implements MessageHandler {
     private static FileHost fileHost = new FileHost();
     private static DuplicateFilter filter = new DuplicateFilter();
 
+    private void sendMessage(ServerResponse message) {
+        this.getServerHostThread().sendMessage(message);
+    }
+
+    private void respondClient(ReceivingMessage message, Header header, MessageDataLoader dataLoader) {
+        ServerResponse response = new ServerResponse(message.callId, header, dataLoader, message.source);
+        this.sendMessage(response);
+    }
+
+    private void respondClientSuccess(ReceivingMessage message, MessageDataLoader dataLoader) {
+        Header header = new Header(new String[]{"STATUS", "SUCCESS"}, new ArrayList<>());
+        respondClient(message, header, dataLoader);
+    }
+
+    private void respondClientSuccess(ReceivingMessage message) {
+        respondClientSuccess(message, new EmptyDataLoader());
+    }
+
+    private void respondClientError(ReceivingMessage message, MessageDataLoader dataLoader) {
+        Header header = new Header(new String[]{"STATUS", "ERROR"}, new ArrayList<>());
+        respondClient(message, header, dataLoader);
+    }
+
+    private void respondClientError(ReceivingMessage message) {
+        respondClientError(message, new EmptyDataLoader());
+    }
+
     @Override
-    public void handleMessage(ReceivingMessage receivingMessage) throws IOException, PacketException {
+    public void handleMessage(ReceivingMessage receivingMessage) {
         EndPointCall endPointCall = new EndPointCall(receivingMessage.source, receivingMessage.callId);
 
         log.debug("Receive message from client " + endPointCall + ".");
@@ -56,14 +83,9 @@ public class ClientMessageHandler implements MessageHandler {
                             }
                         }
                     });
-                    ServerResponse response = new ServerResponse(receivingMessage.callId, header,
-                            fileResolver, receivingMessage.source);
-                    this.getServerHostThread().sendMessage(response);
+                    this.respondClient(receivingMessage, header, fileResolver);
                 } catch (FileNotFoundException unused) {
-                    Header header = new Header(new String[]{"STATUS", "ERROR"}, new ArrayList<>());
-                    ServerResponse response = new ServerResponse(receivingMessage.callId, header,
-                            new EmptyDataLoader(), receivingMessage.source);
-                    this.getServerHostThread().sendMessage(response);
+                    this.respondClientError(receivingMessage);
                 }
                 break;
             }
@@ -71,11 +93,13 @@ public class ClientMessageHandler implements MessageHandler {
                 String path = receivingMessage.header.getParams()[1];
                 int offset = (int)((HeaderIntegerValue)receivingMessage.header.getValue("Offset")).getValue();
                 byte[] data = receivingMessage.payload;
-                fileHost.insert(path, offset, data);
-                Header header = new Header(new String[]{"STATUS", "SUCCESS"}, new ArrayList<>());
-                ServerResponse response = new ServerResponse(receivingMessage.callId, header,
-                        new EmptyDataLoader(), receivingMessage.source);
-                this.getServerHostThread().sendMessage(response);
+                try {
+                    fileHost.insert(path, offset, data);
+                    this.respondClientSuccess(receivingMessage);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    this.respondClientError(receivingMessage);
+                }
                 break;
             }
             case "MONITOR": {
@@ -88,11 +112,13 @@ public class ClientMessageHandler implements MessageHandler {
                 String path = receivingMessage.header.getParams()[1];
                 int offset = (int)((HeaderIntegerValue)receivingMessage.header.getValue("Offset")).getValue();
                 int length = (int)((HeaderIntegerValue)receivingMessage.header.getValue("Length")).getValue();
-                fileHost.delete(path, offset, length);
-                Header header = new Header(new String[]{"STATUS", "SUCCESS"}, new ArrayList<>());
-                ServerResponse response = new ServerResponse(receivingMessage.callId, header,
-                        new EmptyDataLoader(), receivingMessage.source);
-                this.getServerHostThread().sendMessage(response);
+                try {
+                    fileHost.delete(path, offset, length);
+                    this.respondClientSuccess(receivingMessage);
+                } catch (IOException e) {
+                    this.respondClientError(receivingMessage);
+                    e.printStackTrace();
+                }
                 break;
             }
             case "CHECK": {
@@ -111,14 +137,9 @@ public class ClientMessageHandler implements MessageHandler {
                                     new HeaderIntegerValue( fileHost.getLastModify(path))));
                         }
                     });
-                    ServerResponse response = new ServerResponse(receivingMessage.callId, header,
-                            new EmptyDataLoader(), receivingMessage.source);
-                    this.getServerHostThread().sendMessage(response);
+                    this.respondClient(receivingMessage, header, new EmptyDataLoader());
                 } else {
-                    Header header = new Header(new String[]{"STATUS", "ERROR"}, new ArrayList<>());
-                    ServerResponse response = new ServerResponse(receivingMessage.callId, header,
-                            new EmptyDataLoader(), receivingMessage.source);
-                    this.getServerHostThread().sendMessage(response);
+                    this.respondClientError(receivingMessage);
                 }
                 break;
             }

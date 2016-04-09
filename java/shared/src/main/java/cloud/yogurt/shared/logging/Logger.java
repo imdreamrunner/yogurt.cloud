@@ -32,12 +32,13 @@ public class Logger {
         logString.append(name);
         logString.append(" ");
         if (tag != null) {
-            logString.append(" [");
+            logString.append("[");
             logString.append(tag);
             logString.append("] ");
         }
         logString.append(message);
         System.err.println(logString.toString());
+        System.err.flush();
     }
 
     public void debug(String tag, String message) {

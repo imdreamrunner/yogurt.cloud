@@ -25,7 +25,7 @@ public class MessagePacketHandler implements PacketHandler {
     }
 
     @Override
-    public void handlePacket(Packet packet) throws IOException, PacketException {
+    public void handlePacket(Packet packet) {
         receiveBuffer.add(packet);
         if (packet.eomFlag) {
             consumePackets();
@@ -33,11 +33,9 @@ public class MessagePacketHandler implements PacketHandler {
     }
 
     /**
-     * 
-     * @throws IOException
-     * @throws PacketException
+     * Consume an sequence of received packets.
      */
-    synchronized private void consumePackets() throws IOException, PacketException {
+    synchronized private void consumePackets() {
         int dataSize = 0;
         for (Packet packet : receiveBuffer) {
             dataSize += packet.content.length;

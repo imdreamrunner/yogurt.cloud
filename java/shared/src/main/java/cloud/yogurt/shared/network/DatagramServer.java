@@ -34,8 +34,22 @@ public abstract class DatagramServer extends Thread implements PacketSender {
 
     private List<Packet> packetsToSend = new LinkedList<>();
 
+    /**
+     * Next packet ID to be used for an endpoint call.
+     */
     private Map<EndPointCall, Long> sendId = new HashMap<>();
+
+    /**
+     * As a receiver, next packet ID to be received for and endpoint call.
+     */
     private Map<EndPointCall, Long> ackId = new HashMap<>();
+
+    /**
+     * As a sender, next packet ID to be received by receiver.
+     */
+    private Map<EndPointCall, Long> receivedId = new HashMap<>();
+
+    private Map<EndPointCall, SendBuffer> sendBufferMap = new HashMap<>();
 
     protected abstract PacketHandler getPacketHandler();
 
@@ -107,13 +121,13 @@ public abstract class DatagramServer extends Thread implements PacketSender {
                     " ACK=" + packet.ackPacket);
 
             if (setAckId(packet.endPoint, packet.callId, packet.id)) {
-                log.debug("Package is accepted.");
                 getPacketHandler().handlePacket(packet);
+                setReceivedId(packet.endPoint, packet.callId, packet.ackPacket);
                 if (!packet.ackFlag) {
                     sendAck(packet.endPoint, packet.callId);
                 }
             } else {
-                log.debug("Package is dropped.");
+                log.debug("Packet is dropped.");
             }
 
         }
@@ -163,8 +177,8 @@ public abstract class DatagramServer extends Thread implements PacketSender {
 
     /**
      * Simple packet with ACK included
-     * @param endPoint
-     * @param call
+     * @param endPoint to whom the packet is sent to.
+     * @param call call ID of the packet.
      * @throws PacketException
      */
     private void sendAck(EndPoint endPoint, int call) throws PacketException {
@@ -173,6 +187,33 @@ public abstract class DatagramServer extends Thread implements PacketSender {
         packet.endPoint = endPoint;
         packet.ackFlag = true;
         sendPacket(packet);
+    }
+
+    private long getReceivedId(EndPoint endPoint, int callId) {
+        Long receivedId = this.receivedId.get(new EndPointCall(endPoint, callId));
+        if (receivedId == null) {
+            return 0;
+        } else {
+            return receivedId;
+        }
+    }
+
+    private void setReceivedId(EndPoint endPoint, int callId, long id) {
+        if (getReceivedId(endPoint, callId) < id) {
+            EndPointCall endPointCall = new EndPointCall(endPoint, callId);
+            log.debug("SET_RECEIVED_ID", "Packet " + id + " i from " + endPointCall);
+            this.receivedId.put(endPointCall, id);
+        }
+    }
+
+    private void bufferPacket(Packet packet) {
+        EndPointCall endPointCall = new EndPointCall(packet.endPoint, packet.callId);
+        SendBuffer sendBuffer = sendBufferMap.get(endPointCall);
+        if (sendBuffer == null) {
+            sendBuffer = new SendBuffer();
+            sendBufferMap.put(endPointCall, sendBuffer);
+        }
+        sendBuffer.bufferPacket(packet);
     }
 
     /**
@@ -186,7 +227,9 @@ public abstract class DatagramServer extends Thread implements PacketSender {
      * @throws PacketException
      */
     public void sendPacket(Packet packet) throws PacketException {
-        packet.id = getSendId(packet.endPoint, packet.callId);
+        if (packet.id < 0) {
+            packet.id = getSendId(packet.endPoint, packet.callId);
+        }
         packet.ackPacket = getAckId(packet.endPoint, packet.callId);
         byte[] constructedPacket = packet.construct();
         log.info("Send packet size " + constructedPacket.length + " to " +

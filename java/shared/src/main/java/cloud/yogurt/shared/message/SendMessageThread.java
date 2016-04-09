@@ -51,9 +51,7 @@ public class SendMessageThread extends Thread {
             packets.get(packets.size() - 1).eomFlag = true;
             for (Packet packet : packets) server.sendPacket(packet);
             log.debug("Finish sending message.");
-        } catch (PacketException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
+        } catch (PacketException | IOException e) {
             e.printStackTrace();
         }
     }

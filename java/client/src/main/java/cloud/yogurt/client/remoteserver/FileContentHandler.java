@@ -26,11 +26,9 @@ public class FileContentHandler implements MessageHandler {
     /**
      * Handle the receiving message from the server.
      * @param receivingMessage the message just received.
-     * @throws IOException
-     * @throws PacketException
      */
     @Override
-    public void handleMessage(ReceivingMessage receivingMessage) throws IOException, PacketException {
+    public void handleMessage(ReceivingMessage receivingMessage) {
         log.info("Handle file content, and update cache.");
         this.cache.updateCache(filename,
                 receivingMessage.payload,

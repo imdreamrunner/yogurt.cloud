@@ -41,7 +41,7 @@ public class FileHost {
         return fileResolver;
     }
 
-    public void insert(String filename, int offset, byte[] fragment) throws IOException, PacketException {
+    public void insert(String filename, int offset, byte[] fragment) throws IOException {
         log.debug("Insert " + new String(fragment, SharedConfig.CONTENT_CHARSET) + " into " + filename +
                 " offset " + offset);
 
@@ -58,7 +58,7 @@ public class FileHost {
         notifyMonitor(filename);
     }
 
-    private void notifyMonitor(String filename) throws IOException, PacketException {
+    private void notifyMonitor(String filename) {
         if (monitors.get(filename) != null) {
             for (FileChangeMonitor monitor: monitors.get(filename) ) {
                 monitor.fileChange();
@@ -75,7 +75,7 @@ public class FileHost {
         monitors.get(filename).add(new FileChangeMonitor(filename, duration, endPoint, callId));
     }
 
-    public void delete(String filename, int offset, int length) throws IOException, PacketException {
+    public void delete(String filename, int offset, int length) throws IOException {
         log.info("Delete " + filename + " from " + offset + " for " + length + ".");
 
         File file = new File(SharedConfig.SERVER_BASE_PATH + "/" + filename);

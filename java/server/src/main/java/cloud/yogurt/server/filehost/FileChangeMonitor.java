@@ -7,6 +7,7 @@ import cloud.yogurt.shared.logging.Logger;
 import cloud.yogurt.shared.network.EndPoint;
 import cloud.yogurt.shared.network.PacketException;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -30,15 +31,22 @@ public class FileChangeMonitor {
         this.callId = callId;
     }
 
-    public void fileChange() throws IOException, PacketException {
-        ServerHost.getInstance().getHostThread().sendMessage(new ServerResponse(
-                callId,
-                new Header(
-                        new String[] {"NOTICE", filename},
-                        new ArrayList<>()
-                ),
-                new FileResolver(filename),
-                endPoint
-        ));
+    public void fileChange() {
+        FileResolver fileResolver = null;
+        try {
+            fileResolver = new FileResolver(filename);
+
+            ServerHost.getInstance().getHostThread().sendMessage(new ServerResponse(
+                    callId,
+                    new Header(
+                            new String[] {"NOTICE", filename},
+                            new ArrayList<>()
+                    ),
+                    fileResolver,
+                    endPoint
+            ));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
     }
 }

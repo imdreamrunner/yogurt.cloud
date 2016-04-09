@@ -14,7 +14,7 @@ import java.util.List;
 /**
  * Message server that acts as a wrapper of UDP servers
  */
-public abstract class MessageServer extends DatagramServer {
+public abstract class MessageServer extends DatagramServer implements MessageSender {
     private MessagePacketHandler messagePacketHandler = null;
     private static Logger log = Logger.getLogger(MessageServer.class.getName());
 
@@ -37,11 +37,9 @@ public abstract class MessageServer extends DatagramServer {
     }
     /**
      * Create thread and send message
-     * @param message
-     * @throws IOException
-     * @throws PacketException
+     * @param message message to send
      */
-    public void sendMessage(SendingMessage message) throws IOException, PacketException {
+    public void sendMessage(SendingMessage message) {
         SendMessageThread sendMessageThread = new SendMessageThread(message, this);
         sendMessageThread.start();
     }

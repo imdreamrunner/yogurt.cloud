@@ -18,7 +18,7 @@ public class Packet {
 
     public EndPoint endPoint;
 
-    public long id;  // 4 bytes
+    public long id = -1;  // 4 bytes
     public long ackPacket;  // 4 bytes
 
     public int callId;  // 2 bytes

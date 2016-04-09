@@ -19,7 +19,7 @@ public class ServerMessageHandler implements MessageHandler {
     private Map<Integer, MessageHandler> handlers = new HashMap<>();
 
     @Override
-    public void handleMessage(ReceivingMessage receivingMessage) throws IOException, PacketException {
+    public void handleMessage(ReceivingMessage receivingMessage) {
         log.debug("Receive message from server.");
         log.debug("Message header:\n" + receivingMessage.header.toString());
 
