@@ -9,6 +9,7 @@ import cloud.yogurt.shared.network.PacketException;
 import cloud.yogurt.shared.sharedconfig.SharedConfig;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.Scanner;
 
 
@@ -25,9 +26,17 @@ public class YogurtClient {
     public static void main(String[] args) throws IOException, PacketException {
         log.info("Starting Yogurt Client");
 
-        server = new RemoteServer(SharedConfig.SERVER_ADDRESS, SharedConfig.SERVER_PORT);
+        InetAddress address;
+        if (args.length > 0) {
+            String serverHost = args[0];
+            address = InetAddress.getByName(serverHost);
+        } else {
+            address = SharedConfig.SERVER_ADDRESS;
+        }
 
-        System.out.println("Welcome to Yogurt Cloud.");
+        server = new RemoteServer(address, SharedConfig.SERVER_PORT);
+
+        System.out.println("Welcome to Yogurt Cloud. Server: " + address.toString());
         System.out.println();
 
         Scanner scanner = new Scanner(System.in);
