@@ -113,13 +113,10 @@ public abstract class DatagramServer extends Thread implements PacketSender {
             packet.endPoint.address = receiveDatagram.getAddress();
             packet.endPoint.port = receiveDatagram.getPort();
 
-            log.debug("Receive datagram size of " + buffer.length + " from " +
-                    packet.endPoint.address + ":" + packet.endPoint.port + "," +
-                    " Call=" + packet.callId +
-                    " Packet=" + packet.id +
-                    " ACK=" + packet.ackPacket);
+            log.debug("Receive packet " + packet.toString());
 
             setReceivedId(packet.endPoint, packet.callId, packet.ackPacket);
+
             if (setAckId(packet.endPoint, packet.callId, packet.id)) {
                 getPacketHandler().handlePacket(packet);
                 if (!packet.ackFlag) {
@@ -127,6 +124,7 @@ public abstract class DatagramServer extends Thread implements PacketSender {
                 }
             } else {
                 log.debug("Packet is dropped.");
+                sendAck(packet.endPoint, packet.callId);
             }
 
         }
@@ -170,6 +168,8 @@ public abstract class DatagramServer extends Thread implements PacketSender {
             EndPointCall endPointCall = new EndPointCall(endPoint, call);
             ackId.put(endPointCall, id + 1);
             return true;
+        } else {
+            log.debug("NOT_SET_ACK", "Expected " + getAckId(endPoint, call) + ", received " + id);
         }
         return false;
     }
@@ -177,12 +177,12 @@ public abstract class DatagramServer extends Thread implements PacketSender {
     /**
      * Simple packet with ACK included
      * @param endPoint to whom the packet is sent to.
-     * @param call call ID of the packet.
+     * @param callId call ID of the packet.
      * @throws PacketException
      */
-    private void sendAck(EndPoint endPoint, int call) throws PacketException {
+    private void sendAck(EndPoint endPoint, int callId) throws PacketException {
         Packet packet = new Packet();
-        packet.callId = call;
+        packet.callId = callId;
         packet.endPoint = endPoint;
         packet.ackFlag = true;
         sendPacket(packet);

@@ -145,7 +145,8 @@ public class Packet {
     }
 
     public String toString() {
-        return "<Packet " + id + " to " + endPoint + "->" + callId + " size:" + content.length + ">";
+        return "<Packet " + id + " to " + endPoint + "->" + callId + " size:" + content.length +
+                " ack:" + ackPacket + ">";
     }
 
 }
