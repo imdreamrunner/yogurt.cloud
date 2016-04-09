@@ -214,6 +214,11 @@ public abstract class DatagramServer extends Thread implements PacketSender {
         return false;
     }
 
+
+    public boolean isNextToSend(Packet packet) {
+        return getReceivedId(packet.endPoint, packet.callId) == packet.id;
+    }
+
     /**
      * Send packet
      *  set packet id
