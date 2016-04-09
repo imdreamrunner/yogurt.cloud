@@ -7,6 +7,8 @@ import java.util.Date;
  * Logger used by all Yogurt classes.
  */
 public class Logger {
+    public static boolean silent = false;
+
     private String name;
 
     private Logger(String name) {
@@ -37,8 +39,10 @@ public class Logger {
             logString.append("] ");
         }
         logString.append(message);
-        System.err.println(logString.toString());
-        System.err.flush();
+        if (!silent) {
+            System.err.println(logString.toString());
+            System.err.flush();
+        }
     }
 
     public void debug(String tag, String message) {

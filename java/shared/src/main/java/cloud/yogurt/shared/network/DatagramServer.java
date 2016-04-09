@@ -224,7 +224,7 @@ public abstract class DatagramServer extends Thread implements PacketSender {
      * @param packet reference for packet construction
      * @throws PacketException
      */
-    public void sendPacket(Packet packet) throws PacketException {
+    public void sendPacket(Packet packet, int retry) throws PacketException {
         if (packet.id < 0) {
             packet.id = getSendId(packet.endPoint, packet.callId);
         }
@@ -234,7 +234,7 @@ public abstract class DatagramServer extends Thread implements PacketSender {
         sendingDatagram.setAddress(packet.endPoint.address);
         sendingDatagram.setPort(packet.endPoint.port);
         if (!packet.ackFlag) {
-            SetTimeout.setTimeout(new ResendPacket(packet, this), RESENT_TIMEOUT);
+            SetTimeout.setTimeout(new ResendPacket(packet, this, retry), RESENT_TIMEOUT);
         }
         try {
             log.info("Send packet " + packet.toString());
@@ -242,6 +242,11 @@ public abstract class DatagramServer extends Thread implements PacketSender {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+
+    public void sendPacket(Packet packet) throws PacketException {
+        sendPacket(packet, 0);
     }
 
 }

@@ -26,6 +26,8 @@ public class YogurtClient {
     public static void main(String[] args) throws IOException, PacketException {
         log.info("Starting Yogurt Client");
 
+        Logger.silent = false;
+
         InetAddress address;
         if (args.length > 0) {
             String serverHost = args[0];

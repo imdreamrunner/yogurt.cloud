@@ -19,7 +19,8 @@ public class SharedConfig {
     public static String CLIENT_BASE_PATH = System.getProperty("user.home") + "/YogurtCloud";
     public static String SERVER_BASE_PATH = System.getProperty("user.home") + "/YogurtServer";
 
-    public static long RESENT_TIMEOUT = 200;
+    public static long RESENT_TIMEOUT = 1000;
+    public static int MAXIMUM_RETRY = 10;
 
     static {
         try {

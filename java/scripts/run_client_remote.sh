@@ -6,4 +6,4 @@ cd ${DIR}/../
 
 ./gradlew client:installApp
 
-./client/build/install/client/bin/client 188.166.255.104
+./client/build/install/client/bin/client yogurt.cloud

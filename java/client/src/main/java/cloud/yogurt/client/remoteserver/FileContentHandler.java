@@ -30,8 +30,10 @@ public class FileContentHandler implements MessageHandler {
     @Override
     public void handleMessage(ReceivingMessage receivingMessage) {
         log.info("Handle file content, and update cache.");
-        this.cache.updateCache(filename,
-                receivingMessage.payload,
-                ((HeaderIntegerValue)receivingMessage.header.getValue("LastModify")).getValue());
+        if (receivingMessage.header.getValue("LastModify") != null) {
+            this.cache.updateCache(filename,
+                    receivingMessage.payload,
+                    ((HeaderIntegerValue)receivingMessage.header.getValue("LastModify")).getValue());
+        }
     }
 }
