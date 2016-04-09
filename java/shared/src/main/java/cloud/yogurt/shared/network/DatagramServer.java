@@ -119,9 +119,9 @@ public abstract class DatagramServer extends Thread implements PacketSender {
                     " Packet=" + packet.id +
                     " ACK=" + packet.ackPacket);
 
+            setReceivedId(packet.endPoint, packet.callId, packet.ackPacket);
             if (setAckId(packet.endPoint, packet.callId, packet.id)) {
                 getPacketHandler().handlePacket(packet);
-                setReceivedId(packet.endPoint, packet.callId, packet.ackPacket);
                 if (!packet.ackFlag) {
                     sendAck(packet.endPoint, packet.callId);
                 }
