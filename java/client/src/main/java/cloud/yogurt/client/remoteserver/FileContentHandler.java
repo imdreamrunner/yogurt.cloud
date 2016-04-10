@@ -18,10 +18,12 @@ public class FileContentHandler implements MessageHandler {
 
     String filename;
     FileCache cache;
+    YogurtServer server;
 
-    public FileContentHandler(String filename, FileCache cache) {
+    public FileContentHandler(String filename, FileCache cache, YogurtServer server) {
         this.filename = filename;
         this.cache = cache;
+        this.server = server;
     }
 
     /**
@@ -35,7 +37,8 @@ public class FileContentHandler implements MessageHandler {
             this.cache.updateCache(filename,
                     receivingMessage.payload,
                     ((HeaderIntegerValue)receivingMessage.header.getValue("LastModify")).getValue());
-            log.printRaw(new String(receivingMessage.payload, SharedConfig.CONTENT_CHARSET));
+            Logger.printRaw(new String(receivingMessage.payload, SharedConfig.CONTENT_CHARSET));
+            this.server.releaseServer();
         }
     }
 }
