@@ -124,14 +124,16 @@ public abstract class DatagramServer extends Thread implements PacketSender {
 
             setReceivedId(endPointCall, packet.ackPacket);
 
+            if (packet.ackFlag) {
+                // Pure ACK packet. NO need to process.
+                return;
+            }
 
             if (getAckId(endPointCall) == packet.id) {
                 // The packet is exactly what we want.
                 setAckId(endPointCall, packet.id);
                 getPacketHandler().handlePacket(packet);
-                if (!packet.ackFlag) {
-                    sendAck(packet.endPoint, packet.callId);
-                }
+                sendAck(packet.endPoint, packet.callId);
 
                 ReceivingBuffer receivingBuffer = receivingBuffers.get(endPointCall);
 
@@ -258,11 +260,9 @@ public abstract class DatagramServer extends Thread implements PacketSender {
      */
     public void sendPacket(Packet packet, int retry) throws PacketException {
         if (packet.id < 0) {
-            if (packet.ackFlag) {
+            if (!packet.ackFlag) {
                 // We set packet ID to 0 for pure ACK packets.
                 // We don't care if they are lost.
-                packet.id = 0;
-            } else {
                 packet.id = getSendId(packet.endPoint, packet.callId);
             }
         }

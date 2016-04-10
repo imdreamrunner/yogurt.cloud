@@ -65,7 +65,7 @@ public class PacketTest {
 
     @Test
     public void testPacketConstruct3() {
-        packet.callId = 9;
+        packet.callId = -1;
         packet.eomFlag = false;
         packet.resFlag = false;
         packet.ackFlag = true;

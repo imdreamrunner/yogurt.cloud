@@ -24,7 +24,7 @@ public class ServerMessageHandler implements MessageHandler {
         log.debug("Message header:\n" + receivingMessage.header.toString());
 
         String result = new String(receivingMessage.payload, SharedConfig.CONTENT_CHARSET);
-        System.out.println("Server Response:\n" + result);
+        log.debug("Server Response:\n" + result);
 
         if (handlers.get(receivingMessage.callId) != null) {
             handlers.get(receivingMessage.callId).handleMessage(receivingMessage);

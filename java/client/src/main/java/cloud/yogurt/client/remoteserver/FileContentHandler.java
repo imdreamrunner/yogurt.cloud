@@ -6,6 +6,7 @@ import cloud.yogurt.shared.logging.Logger;
 import cloud.yogurt.shared.message.MessageHandler;
 import cloud.yogurt.shared.message.ReceivingMessage;
 import cloud.yogurt.shared.network.PacketException;
+import cloud.yogurt.shared.sharedconfig.SharedConfig;
 
 import java.io.IOException;
 
@@ -29,11 +30,12 @@ public class FileContentHandler implements MessageHandler {
      */
     @Override
     public void handleMessage(ReceivingMessage receivingMessage) {
-        log.info("Handle file content, and update cache.");
         if (receivingMessage.header.getValue("LastModify") != null) {
+            log.info("Handle file content, and update cache.");
             this.cache.updateCache(filename,
                     receivingMessage.payload,
                     ((HeaderIntegerValue)receivingMessage.header.getValue("LastModify")).getValue());
+            log.printRaw(new String(receivingMessage.payload, SharedConfig.CONTENT_CHARSET));
         }
     }
 }

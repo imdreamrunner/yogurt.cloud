@@ -11,6 +11,7 @@ import cloud.yogurt.shared.message.EmptyDataLoader;
 import cloud.yogurt.shared.message.MessageDataLoader;
 import cloud.yogurt.shared.message.MessageHandler;
 import cloud.yogurt.shared.message.ReceivingMessage;
+import cloud.yogurt.shared.network.EndPoint;
 import cloud.yogurt.shared.network.EndPointCall;
 
 import java.io.FileNotFoundException;

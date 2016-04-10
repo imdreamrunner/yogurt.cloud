@@ -114,6 +114,9 @@ public class Packet {
      */
     public void decodeDatagram(byte[] bytes) {
         this.callId = readIntegerFromByte(bytes, 0, 2);
+        if (this.callId == 255) {
+            this.callId = -1;
+        }
         int flagInteger = readIntegerFromByte(bytes, 2, 2);
         boolean[] flags = getBitFromInteger(flagInteger, 16);
         this.resFlag = flags[0];

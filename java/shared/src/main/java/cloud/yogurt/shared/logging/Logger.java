@@ -40,7 +40,7 @@ public class Logger {
         }
         logString.append(message);
         if (!silent) {
-            System.err.println(logString.toString());
+            System.err.print("(LOG) " + logString.toString() + "\n>> ");
             System.err.flush();
         }
     }
@@ -79,5 +79,10 @@ public class Logger {
 
     public static Logger getLogger(String name) {
         return new Logger(name);
+    }
+
+    public static void printRaw(String s) {
+        System.out.print("\n" + s + "\n>> ");
+        System.out.flush();
     }
 }

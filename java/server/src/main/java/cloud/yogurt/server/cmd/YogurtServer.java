@@ -1,6 +1,7 @@
 package cloud.yogurt.server.cmd;
 
 import cloud.yogurt.server.serverhost.ServerHost;
+import cloud.yogurt.shared.logging.Logger;
 
 import java.io.IOException;
 
@@ -13,10 +14,10 @@ public class YogurtServer {
         ServerHost host = ServerHost.getInstance();
         host.run();
 
-        System.out.println("Press any key to stop.");
+        Logger.printRaw("Press any key to stop.");
         int ignored = System.in.read();
 
         host.stop();
-        System.out.println("Bye.");
+        Logger.printRaw("Bye.");
     }
 }

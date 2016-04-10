@@ -2,7 +2,6 @@ package cloud.yogurt.shared.network;
 
 import cloud.yogurt.shared.logging.Logger;
 import cloud.yogurt.shared.sharedconfig.SharedConfig;
-import cloud.yogurt.shared.time.SetTimeout;
 import cloud.yogurt.shared.time.TimeoutHandler;
 
 public class ResendPacket implements TimeoutHandler {
