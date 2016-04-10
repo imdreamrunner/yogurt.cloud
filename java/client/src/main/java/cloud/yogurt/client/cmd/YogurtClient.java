@@ -89,7 +89,8 @@ public class YogurtClient {
                     }
                     case "monitor": {
                         String path = components[1];
-                        server.monitor(path);
+                        int duration = Integer.parseInt(components[2]);
+                        server.monitor(path, duration);
                         break;
                     }
                     case "delete": {

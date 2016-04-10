@@ -4,6 +4,7 @@ import cloud.yogurt.client.filecache.FileCache;
 import cloud.yogurt.client.servicecall.*;
 import cloud.yogurt.shared.logging.Logger;
 import cloud.yogurt.shared.sharedconfig.SharedConfig;
+import cloud.yogurt.shared.time.SetTimeout;
 
 import java.net.InetAddress;
 
@@ -81,11 +82,12 @@ public class YogurtServer {
         server.getMessageHandler().registerHandler(callId, new OperationCallHandler(this));
     }
 
-    public void monitor(String path) {
+    public void monitor(String path, int duration) {
         log.info("Monitor " + path + ".");
         serverBusy = true;
-        int callId = makeServiceCall(new MonitorFileChange(path, 1000));
+        int callId = makeServiceCall(new MonitorFileChange(path, duration));
         server.getMessageHandler().registerHandler(callId, new MonitorHandler(path));
+        SetTimeout.setTimeout(new MonitorTimeoutHandler(this), duration * 1000);
     }
 
     public void delete(String path, int offset, int length) {

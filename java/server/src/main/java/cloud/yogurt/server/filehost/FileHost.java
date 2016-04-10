@@ -20,6 +20,12 @@ public class FileHost {
 
     private Map<String, List<FileChangeMonitor>> monitors = new HashMap<>();
 
+    public void removeMonitor(String file, FileChangeMonitor monitor) {
+        if (monitors.get(file) != null) {
+            monitors.get(file).remove(monitor);
+        }
+    }
+
     public FileResolver get(String filename) throws FileNotFoundException {
         return new FileResolver(filename);
     }
@@ -73,7 +79,7 @@ public class FileHost {
         if (monitors.get(filename) == null) {
             monitors.put(filename, new ArrayList<>());
         }
-        monitors.get(filename).add(new FileChangeMonitor(filename, duration, endPoint, callId));
+        monitors.get(filename).add(new FileChangeMonitor(this, filename, duration, endPoint, callId));
     }
 
     public void delete(String filename, int offset, int length) throws IOException {
