@@ -2,14 +2,11 @@ package cloud.yogurt.server.filehost;
 
 import cloud.yogurt.shared.logging.Logger;
 import cloud.yogurt.shared.network.EndPoint;
-import cloud.yogurt.shared.network.PacketException;
 import cloud.yogurt.shared.sharedconfig.SharedConfig;
 
 import java.io.*;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
+import java.nio.file.NoSuchFileException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -47,7 +44,12 @@ public class FileHost {
                 " offset " + offset);
 
         File file = new File(SharedConfig.SERVER_BASE_PATH + "/" + filename);
-        byte[] data = Files.readAllBytes(file.toPath());
+        byte[] data;
+        try {
+           data = Files.readAllBytes(file.toPath());
+        } catch (NoSuchFileException e) {
+            data = new byte[0];
+        }
         byte[] modified = new byte[data.length + fragment.length];
 
         System.arraycopy(data, 0, modified, 0, offset);

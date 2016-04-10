@@ -55,51 +55,55 @@ public class YogurtClient {
             String[] components = command.split(" ");
             String function = components[0];
 
-            switch (function) {
-                case "exit": {
-                    System.out.println("Bye.");
-                    server.stop();
-                    System.exit(0);
-                }
-                case "silent": {
-                    Logger.silent = true;
-                    break;
-                }
-                case "get": {
-                    String path = components[1];
-                    if (components.length > 2) {
-                        int offset = Integer.parseInt(components[2]);
-                        int limit = Integer.parseInt(components[3]);
-                        server.get(path, offset, limit);
-                    } else {
-                        server.get(path);
+            try {
+                switch (function) {
+                    case "exit": {
+                        System.out.println("Bye.");
+                        server.stop();
+                        System.exit(0);
                     }
-                    break;
+                    case "silent": {
+                        Logger.silent = true;
+                        break;
+                    }
+                    case "get": {
+                        String path = components[1];
+                        if (components.length > 2) {
+                            int offset = Integer.parseInt(components[2]);
+                            int limit = Integer.parseInt(components[3]);
+                            server.get(path, offset, limit);
+                        } else {
+                            server.get(path);
+                        }
+                        break;
+                    }
+                    case "insert": {
+                        String path = components[1];
+                        int offset = Integer.parseInt(components[2]);
+                        String fragment = components[3];
+                        server.insert(path, offset, fragment);
+                        break;
+                    }
+                    case "monitor": {
+                        String path = components[1];
+                        server.monitor(path);
+                        break;
+                    }
+                    case "delete": {
+                        String path = components[1];
+                        int offset = Integer.parseInt(components[2]);
+                        int length = Integer.parseInt(components[3]);
+                        server.delete(path, offset, length);
+                        break;
+                    }
+                    case "check": {
+                        String path = components[1];
+                        server.check(path);
+                        break;
+                    }
                 }
-                case "insert": {
-                    String path = components[1];
-                    int offset = Integer.parseInt(components[2]);
-                    String fragment = components[3];
-                    server.insert(path, offset, fragment);
-                    break;
-                }
-                case "monitor": {
-                    String path = components[1];
-                    server.monitor(path);
-                    break;
-                }
-                case "delete": {
-                    String path = components[1];
-                    int offset = Integer.parseInt(components[2]);
-                    int length = Integer.parseInt(components[3]);
-                    server.delete(path, offset, length);
-                    break;
-                }
-                case "check": {
-                    String path = components[1];
-                    server.check(path);
-                    break;
-                }
+            } catch (ArrayIndexOutOfBoundsException | NumberFormatException ignored) {
+                Logger.printRaw("Illegal parameters. Please check.");
             }
         }
     }

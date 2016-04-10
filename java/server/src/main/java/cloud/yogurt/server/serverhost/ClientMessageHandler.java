@@ -111,7 +111,7 @@ public class ClientMessageHandler implements MessageHandler {
                 try {
                     fileHost.insert(path, offset, data);
                     this.respondClientSuccess(receivingMessage);
-                } catch (IOException e) {
+                } catch (Exception e) {
                     e.printStackTrace();
                     this.respondClientError(receivingMessage);
                 }
@@ -130,7 +130,7 @@ public class ClientMessageHandler implements MessageHandler {
                 try {
                     fileHost.delete(path, offset, length);
                     this.respondClientSuccess(receivingMessage);
-                } catch (IOException e) {
+                } catch (Exception e) {
                     this.respondClientError(receivingMessage);
                     e.printStackTrace();
                 }
