@@ -63,9 +63,7 @@ public class FileHost {
 
     private void notifyMonitor(String filename) {
         if (monitors.get(filename) != null) {
-            for (FileChangeMonitor monitor: monitors.get(filename) ) {
-                monitor.fileChange();
-            }
+            monitors.get(filename).forEach(FileChangeMonitor::fileChange);
         }
     }
 

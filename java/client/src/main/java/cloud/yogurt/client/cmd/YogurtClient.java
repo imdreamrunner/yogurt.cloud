@@ -70,7 +70,10 @@ public class YogurtClient {
                         String path = components[1];
                         if (components.length > 2) {
                             int offset = Integer.parseInt(components[2]);
-                            int limit = Integer.parseInt(components[3]);
+                            int limit = Integer.MAX_VALUE;
+                            if (components.length > 3) {
+                                limit = Integer.parseInt(components[3]);
+                            }
                             server.get(path, offset, limit);
                         } else {
                             server.get(path);

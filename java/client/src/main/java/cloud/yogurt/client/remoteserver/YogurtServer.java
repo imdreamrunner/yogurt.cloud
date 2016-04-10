@@ -56,6 +56,9 @@ public class YogurtServer {
         if (cached != null) {
             log.info("Trying to get " + path + " from cache.");
             try {
+                if (offset + limit > cached.length) {
+                    limit = Math.max(0, cached.length - offset);
+                }
                 byte[] partial = new byte[limit];
                 System.arraycopy(cached, offset, partial, 0, limit);
                 Logger.printRaw(new String(partial, SharedConfig.CONTENT_CHARSET));
