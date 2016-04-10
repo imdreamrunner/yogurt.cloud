@@ -73,8 +73,6 @@ UdpProxy.prototype.send = function send(msg, port, address, callback) {
 };
 
 UdpProxy.prototype.createClient = function createClient(msg, sender) {
-    var outOfOrderMessage = null;
-
     var senderD = this.hashD(sender);
     var proxy = this;
      if (this.connections.hasOwnProperty(senderD)) {
@@ -96,32 +94,18 @@ UdpProxy.prototype.createClient = function createClient(msg, sender) {
             proxy.emit('proxyMsgDrop', msg, sender);
             return;
         }
-        if (outOfOrderMessage != null) {
-            if (outOfOrderMessage.delay == 0) {
-                console.log("send out of order message after delay.");
-                proxy.send(outOfOrderMessage.msg, outOfOrderMessage.port, outOfOrderMessage.address, function (err, bytes) {
-                    if (err) proxy.emit('proxyError', err);
-                });
-                outOfOrderMessage = null;
-            } else {
-                outOfOrderMessage.delay --;
-            }
-        } else {
-            if (Math.random() > proxy.outOfOrder) {
-                outOfOrderMessage = {
-                    msg: msg,
-                    port: this.peer.port,
-                    address: this.peer.address,
-                    sender: sender,
-                    delay: Math.floor(Math.random() * 10)
-                };
-                console.log("make message out of order, delay " + outOfOrderMessage.delay);
-            }
+        var delay = 0;
+        if (Math.random() > proxy.outOfOrder) {
+            console.log("Delay proxy message by 500ms.")
+            delay = 500;
         }
-        proxy.send(msg, this.peer.port, this.peer.address, function (err, bytes) {
-            if (err) proxy.emit('proxyError', err);
-        });
-        proxy.emit('proxyMsg', msg, sender);
+        var self = this;
+        setTimeout(function() {
+            proxy.send(msg, self.peer.port, self.peer.address, function (err, bytes) {
+                if (err) proxy.emit('proxyError', err);
+            });
+            proxy.emit('proxyMsg', msg, sender);
+        }, delay);
     }).on('close', function () {
         proxy.emit('proxyClose', this.peer);
         this.removeAllListeners();
@@ -136,13 +120,22 @@ UdpProxy.prototype.createClient = function createClient(msg, sender) {
             proxy.emit('messageDrop', msg, sender);
             return;
         }
-        proxy.emit('message', msg, sender);
-        this.send(msg, 0, msg.length, proxy.port, proxy.host, function (err, bytes) {
-            if (err) proxy.emit('proxyError', err);
-            if (!self.t) self.t = setTimeout(function () {
-                self.close();
-            }, proxy.tOutTime);
-        });
+
+        var delay = 0;
+        if (Math.random() > proxy.outOfOrder) {
+            console.log("Delay send message by 500ms.")
+            delay = 500;
+        }
+        setTimeout(function() {
+            proxy.emit('message', msg, sender);
+            self.send(msg, 0, msg.length, proxy.port, proxy.host, function (err, bytes) {
+                if (err) proxy.emit('proxyError', err);
+                if (!self.t) self.t = setTimeout(function () {
+                    self.close();
+                }, proxy.tOutTime);
+            });
+        }, delay);
+
     });
     this.connections[senderD] = client;
     return client;

@@ -2,7 +2,7 @@
 var proxy = require('./proxy');
 
 var RELIABLE = 0.8;
-var OUT_OF_ORDER = 0.8;
+var OUT_OF_ORDER = 0.5;
 
 var options = {
         address: '127.0.0.1',
