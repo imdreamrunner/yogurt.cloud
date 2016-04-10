@@ -1,7 +1,9 @@
 package cloud.yogurt.client.cmd;
 
 import cloud.yogurt.client.filecache.FileCache;
+import cloud.yogurt.client.remoteserver.FileStatusHandler;
 import cloud.yogurt.client.remoteserver.FileContentHandler;
+import cloud.yogurt.client.remoteserver.FileStatusHandler;
 import cloud.yogurt.client.remoteserver.RemoteServer;
 import cloud.yogurt.client.servicecall.*;
 import cloud.yogurt.shared.logging.Logger;
@@ -68,6 +70,11 @@ public class YogurtClient {
                         server.getMessageHandler().registerHandler(callId, fileContentHandler);
                     } else {
                         System.out.println("File in cache:");
+                        int callId = makeServiceCall(new CheckFileStatus(path)); //check system call
+                        FileStatusHandler fileStatusHandler = new FileStatusHandler(path, fileCache);
+                        server.getMessageHandler().registerHandler(callId, fileStatusHandler);
+
+                        // still print out cached value
                         System.out.println(new String(fileCache.getCache(path), SharedConfig.CONTENT_CHARSET));
                     }
                     break;

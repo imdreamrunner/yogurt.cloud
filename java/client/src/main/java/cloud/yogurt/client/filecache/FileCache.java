@@ -13,14 +13,21 @@ public class FileCache {
     private Map<String, Long> syncTIme = new HashMap<>();
 
     public void updateCache(String file, byte[] data, long updateTime) {
-        fileContent.put(file,  data);
+        fileContent.put(file, data);
+        modifyTime.put(file, updateTime);
     }
-
+    public long getModifyTime(String file) {
+        return modifyTime.get(file);
+    }
     public byte[] getCache(String file) {
         if (fileContent.get(file) != null)  {
             return fileContent.get(file);
         }
         return null;
+    }
+    public void timeoutCache(String file) {
+        fileContent.remove(file);
+        modifyTime.remove(file);
     }
 
 }
