@@ -17,6 +17,7 @@ var UdpProxy = function (options) {
     this.host = options.address || 'localhost';
     this.port = options.port || 41234;
     this.reliable = options.reliable || 1;
+    this.outOfOrder = options.outOfOrder || 1;
     this.connections = {};
     if (options.ipv6) {
         this.udpType = 'udp6';
@@ -72,6 +73,8 @@ UdpProxy.prototype.send = function send(msg, port, address, callback) {
 };
 
 UdpProxy.prototype.createClient = function createClient(msg, sender) {
+    var outOfOrderMessage = null;
+
     var senderD = this.hashD(sender);
     var proxy = this;
      if (this.connections.hasOwnProperty(senderD)) {
@@ -92,6 +95,28 @@ UdpProxy.prototype.createClient = function createClient(msg, sender) {
         if (Math.random() > proxy.reliable) {
             proxy.emit('proxyMsgDrop', msg, sender);
             return;
+        }
+        if (outOfOrderMessage != null) {
+            if (outOfOrderMessage.delay == 0) {
+                console.log("send out of order message after delay.");
+                proxy.send(outOfOrderMessage.msg, outOfOrderMessage.port, outOfOrderMessage.address, function (err, bytes) {
+                    if (err) proxy.emit('proxyError', err);
+                });
+                outOfOrderMessage = null;
+            } else {
+                outOfOrderMessage.delay --;
+            }
+        } else {
+            if (Math.random() > proxy.outOfOrder) {
+                outOfOrderMessage = {
+                    msg: msg,
+                    port: this.peer.port,
+                    address: this.peer.address,
+                    sender: sender,
+                    delay: Math.floor(Math.random() * 10)
+                };
+                console.log("make message out of order, delay " + outOfOrderMessage.delay);
+            }
         }
         proxy.send(msg, this.peer.port, this.peer.address, function (err, bytes) {
             if (err) proxy.emit('proxyError', err);

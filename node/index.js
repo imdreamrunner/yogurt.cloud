@@ -1,7 +1,8 @@
 // Let's create a DNS-proxy that proxies IPv4 udp-requests to googles IPv6 DNS-server
 var proxy = require('./proxy');
 
-var RELIABLE = 0.5;
+var RELIABLE = 0.8;
+var OUT_OF_ORDER = 0.8;
 
 var options = {
         address: '127.0.0.1',
@@ -12,7 +13,8 @@ var options = {
         localipv6: false,
         proxyaddress: '0.0.0.0',
         timeOutTime: 60 * 60 * 1000 , // 60 min
-        reliable: RELIABLE
+        reliable: RELIABLE,
+        outOfOrder: OUT_OF_ORDER
     };
 
 // This is the function that creates the server, each connection is handled internally
@@ -23,6 +25,7 @@ server.on('listening', function (details) {
     console.log('udp-proxy-server ready on ' + details.server.family + '  ' + details.server.address + ':' + details.server.port);
     console.log('traffic is forwarded to ' + details.target.family + '  ' + details.target.address + ':' + details.target.port);
     console.log('Reliability is ' + RELIABLE);
+    console.log('Out of Order possibility is ' + OUT_OF_ORDER);
 });
 
 // 'bound' means the connection to server has been made and the proxying is in action
