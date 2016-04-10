@@ -13,7 +13,11 @@ public class OperationCallHandler implements MessageHandler {
 
     @Override
     public void handleMessage(ReceivingMessage receivingMessage) {
-        Logger.printRaw("Operation finished.");
+        if (receivingMessage.header.getParams()[1].equals("SUCCESS")) {
+            Logger.printRaw("Operation succeed.");
+        } else {
+            Logger.printRaw("Operation failed.");
+        }
         this.server.releaseServer();
     }
 }
