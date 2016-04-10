@@ -61,6 +61,10 @@ public class YogurtClient {
                     server.stop();
                     System.exit(0);
                 }
+                case "silent": {
+                    Logger.silent = true;
+                    break;
+                }
                 case "get": {
                     String path = components[1];
                     server.get(path);

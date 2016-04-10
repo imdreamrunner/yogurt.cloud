@@ -5,10 +5,7 @@ import cloud.yogurt.shared.header.HeaderIntegerValue;
 import cloud.yogurt.shared.logging.Logger;
 import cloud.yogurt.shared.message.MessageHandler;
 import cloud.yogurt.shared.message.ReceivingMessage;
-import cloud.yogurt.shared.network.PacketException;
 import cloud.yogurt.shared.sharedconfig.SharedConfig;
-
-import java.io.IOException;
 
 /**
  * Handle the content of file received from the server.
@@ -38,6 +35,9 @@ public class FileContentHandler implements MessageHandler {
                     receivingMessage.payload,
                     ((HeaderIntegerValue)receivingMessage.header.getValue("LastModify")).getValue());
             Logger.printRaw(new String(receivingMessage.payload, SharedConfig.CONTENT_CHARSET));
+            this.server.releaseServer();
+        } else {
+            Logger.printRaw("File does not exist.");
             this.server.releaseServer();
         }
     }

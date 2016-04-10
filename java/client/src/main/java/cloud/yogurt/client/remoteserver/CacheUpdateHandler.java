@@ -31,7 +31,7 @@ public class CacheUpdateHandler implements MessageHandler {
     public void handleMessage(ReceivingMessage receivingMessage) {
         log.info("Handle file status, and check cache validation.");
         if (receivingMessage.header.getValue("LastModify") != null) {
-            Logger.printRaw("Last update time for file " + filename + " is " +
+            log.info("Last update time for file " + filename + " is " +
                     ((HeaderIntegerValue)receivingMessage.header.getValue("LastModify")).getValue());
             if (cache.getModifyTime(filename)
                     != ((HeaderIntegerValue)receivingMessage.header.getValue("LastModify")).getValue()) {

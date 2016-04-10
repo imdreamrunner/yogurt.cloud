@@ -52,22 +52,30 @@ public class YogurtServer {
 
     public void insert(String path, int offset, String fragment) {
         log.info("Trying to insert " + fragment + " to " + path + ".");
-        makeServiceCall(new InsertFragment(path, offset, fragment));
+        serverBusy = true;
+        int callId = makeServiceCall(new InsertFragment(path, offset, fragment));
+        server.getMessageHandler().registerHandler(callId, new OperationCallHandler(this));
     }
 
     public void monitor(String path) {
         log.info("Monitor " + path + ".");
-        makeServiceCall(new MonitorFileChange(path, 1000));
+        serverBusy = true;
+        int callId = makeServiceCall(new MonitorFileChange(path, 1000));
+        server.getMessageHandler().registerHandler(callId, new MonitorHandler(path));
     }
 
     public void delete(String path, int offset, int length) {
         log.info("Trying to delete " + length + " from " + path + " at " + offset + ".");
-        makeServiceCall(new DeleteRange(path, offset, length));
+        serverBusy = true;
+        int callId = makeServiceCall(new DeleteRange(path, offset, length));
+        server.getMessageHandler().registerHandler(callId, new OperationCallHandler(this));
     }
 
     public void check(String path) {
         log.info("Trying to check " + path + ".");
-        makeServiceCall(new CheckFileStatus(path));
+        serverBusy = true;
+        int callId = makeServiceCall(new CheckFileStatus(path));
+        server.getMessageHandler().registerHandler(callId, new CheckStatusHandler(path, this));
     }
 
     private static int makeServiceCall(ServiceCall call)  {
