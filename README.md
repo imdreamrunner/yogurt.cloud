@@ -128,11 +128,27 @@ Response:
 
 	New file content in binary.
 
-### Constants
+## How to run against proxy
 
-#### Timeout Duration
+### Run Proxy
 
+```bash
+cd node
+npm install
+npm run app
+```
 
+### Run Server
+
+```bash
+./java/scripts/run_server.sh
+```
+
+### Run Client
+
+```bash
+./java/scripts/run_client_proxy.sh
+```
 
 
 
