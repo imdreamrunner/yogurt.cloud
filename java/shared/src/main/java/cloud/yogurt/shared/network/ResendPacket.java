@@ -22,17 +22,13 @@ public class ResendPacket implements TimeoutHandler {
     public void handleTimeout() {
         if (!this.datagramServer.isPacketReceived(this.packet)) {
             try {
-                if (this.datagramServer.isNextToSend(packet)) {
-                    retry ++;
-                    if (retry > SharedConfig.MAXIMUM_RETRY) {
-                        log.error("TIMEOUT", "Unable to send packet " + packet + " after " + retry + " times.");
-                        return;
-                    }
-                    log.info("TIMEOUT_RESEND", "Resent packet " + packet + " after timeout. Retry = " + retry);
-                    this.datagramServer.sendPacket(this.packet, retry);
-                } else {
-                    SetTimeout.setTimeout(this, 5);
+                retry ++;
+                if (retry > SharedConfig.MAXIMUM_RETRY) {
+                    log.error("TIMEOUT", "Unable to send packet " + packet + " after " + retry + " times.");
+                    return;
                 }
+                log.info("TIMEOUT_RESEND", "Resent packet " + packet + " after timeout. Retry = " + retry);
+                this.datagramServer.sendPacket(this.packet, retry);
             } catch (PacketException e) {
                 e.printStackTrace();
             }

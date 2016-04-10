@@ -10,6 +10,11 @@ public class EndPointCall {
         this.callId = call;
     }
 
+    public EndPointCall(Packet packet) {
+        this.endPoint = packet.endPoint;
+        this.callId = packet.callId;
+    }
+
     /**
      * Message control packet equal checker
      * @param other

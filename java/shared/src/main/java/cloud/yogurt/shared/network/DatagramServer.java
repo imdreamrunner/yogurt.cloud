@@ -50,6 +50,11 @@ public abstract class DatagramServer extends Thread implements PacketSender {
      */
     private Map<EndPointCall, Long> receivedId = new HashMap<>();
 
+    /**
+     * Receive buffer.
+     */
+    private Map<EndPointCall, ReceivingBuffer> receivingBuffers = new HashMap<>();
+
     protected abstract PacketHandler getPacketHandler();
 
     /**
@@ -115,15 +120,47 @@ public abstract class DatagramServer extends Thread implements PacketSender {
 
             log.debug("Receive packet " + packet.toString());
 
-            setReceivedId(packet.endPoint, packet.callId, packet.ackPacket);
+            EndPointCall endPointCall = new EndPointCall(packet);
 
-            if (setAckId(packet.endPoint, packet.callId, packet.id)) {
+            setReceivedId(endPointCall, packet.ackPacket);
+
+
+            if (getAckId(endPointCall) == packet.id) {
+                // The packet is exactly what we want.
+                setAckId(endPointCall, packet.id);
                 getPacketHandler().handlePacket(packet);
                 if (!packet.ackFlag) {
                     sendAck(packet.endPoint, packet.callId);
                 }
+
+                ReceivingBuffer receivingBuffer = receivingBuffers.get(endPointCall);
+
+                if (receivingBuffer != null) {
+                    while(receivingBuffer.peek() != null) {
+                        Packet bufferedPacket = receivingBuffer.peek();
+                        if (getAckId(endPointCall) == bufferedPacket.id) {
+                            getPacketHandler().handlePacket(bufferedPacket);
+                            setAckId(endPointCall, bufferedPacket.id);
+                            receivingBuffer.poll();
+                        } else if (getAckId(endPointCall) > bufferedPacket.id) {
+                            // The packet is useless.
+                            receivingBuffer.poll();
+                        } else {
+                            // The packet is for the future.
+                            break;
+                        }
+                    }
+                }
+
+            } else if (getAckId(endPointCall) < packet.id) {
+                // The packet is for the future.
+                if (receivingBuffers.get(endPointCall) == null) {
+                    receivingBuffers.put(endPointCall, new ReceivingBuffer());
+                }
+                ReceivingBuffer receivingBuffer = receivingBuffers.get(endPointCall);
+                receivingBuffer.add(packet);
             } else {
-                log.debug("Packet is dropped.");
+                log.debug("Packet is dropped, since it's been received.");
                 sendAck(packet.endPoint, packet.callId);
             }
 
@@ -148,8 +185,7 @@ public abstract class DatagramServer extends Thread implements PacketSender {
         return sendId.get(endPointCall) - 1;
     }
 
-    private long getAckId(EndPoint endPoint, int call ) {
-        EndPointCall endPointCall = new EndPointCall(endPoint, call);
+    private long getAckId(EndPointCall endPointCall ) {
         if (ackId.get(endPointCall) != null) {
             return ackId.get(endPointCall);
         }
@@ -158,20 +194,12 @@ public abstract class DatagramServer extends Thread implements PacketSender {
 
     /**
      * Store accepted packets from sender locally.
-     * @param endPoint
-     * @param call
-     * @param id
      * @return true only if is receiving next frame.
      */
-    private boolean setAckId(EndPoint endPoint, int call, long id) {
-        if (getAckId(endPoint, call) == id) {
-            EndPointCall endPointCall = new EndPointCall(endPoint, call);
+    private void setAckId(EndPointCall endPointCall, long id) {
+        if (getAckId(endPointCall) == id) {
             ackId.put(endPointCall, id + 1);
-            return true;
-        } else {
-            log.debug("NOT_SET_ACK", "Expected " + getAckId(endPoint, call) + ", received " + id);
         }
-        return false;
     }
 
     /**
@@ -188,8 +216,8 @@ public abstract class DatagramServer extends Thread implements PacketSender {
         sendPacket(packet);
     }
 
-    private long getReceivedId(EndPoint endPoint, int callId) {
-        Long receivedId = this.receivedId.get(new EndPointCall(endPoint, callId));
+    private long getReceivedId(EndPointCall endPointCall) {
+        Long receivedId = this.receivedId.get(endPointCall);
         if (receivedId == null) {
             return 0;
         } else {
@@ -197,16 +225,15 @@ public abstract class DatagramServer extends Thread implements PacketSender {
         }
     }
 
-    private void setReceivedId(EndPoint endPoint, int callId, long id) {
-        if (getReceivedId(endPoint, callId) < id) {
-            EndPointCall endPointCall = new EndPointCall(endPoint, callId);
+    private void setReceivedId(EndPointCall endPointCall, long id) {
+        if (getReceivedId(endPointCall) < id) {
             log.debug("SET_RECEIVED_ID", "Packet " + id + " i from " + endPointCall);
             this.receivedId.put(endPointCall, id);
         }
     }
 
     public boolean isPacketReceived(Packet packet) {
-        if (getReceivedId(packet.endPoint, packet.callId) > packet.id) {
+        if (getReceivedId(new EndPointCall(packet)) > packet.id) {
             log.debug("CHECK_PACKET_RECEIVED", packet.toString() + " is received.");
             return true;
         }
@@ -216,7 +243,7 @@ public abstract class DatagramServer extends Thread implements PacketSender {
 
 
     public boolean isNextToSend(Packet packet) {
-        return getReceivedId(packet.endPoint, packet.callId) == packet.id;
+        return getReceivedId(new EndPointCall(packet)) == packet.id;
     }
 
     /**
@@ -231,9 +258,15 @@ public abstract class DatagramServer extends Thread implements PacketSender {
      */
     public void sendPacket(Packet packet, int retry) throws PacketException {
         if (packet.id < 0) {
-            packet.id = getSendId(packet.endPoint, packet.callId);
+            if (packet.ackFlag) {
+                // We set packet ID to 0 for pure ACK packets.
+                // We don't care if they are lost.
+                packet.id = 0;
+            } else {
+                packet.id = getSendId(packet.endPoint, packet.callId);
+            }
         }
-        packet.ackPacket = getAckId(packet.endPoint, packet.callId);
+        packet.ackPacket = getAckId(new EndPointCall(packet.endPoint, packet.callId));
         byte[] constructedPacket = packet.construct();
         DatagramPacket sendingDatagram = new DatagramPacket(constructedPacket, constructedPacket.length);
         sendingDatagram.setAddress(packet.endPoint.address);
