@@ -1,0 +1,13 @@
+{
+  "name": "unstable-proxy",
+  "version": "1.0.0",
+  "description": "An unstable proxy to test program with bad network connection locally.",
+  "main": "index.js",
+  "scripts": {
+    "app": "node index.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+  }
+}

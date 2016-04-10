@@ -28,17 +28,20 @@ public class YogurtClient {
 
         Logger.silent = false;
 
-        InetAddress address;
+        InetAddress address = SharedConfig.SERVER_ADDRESS;
+        int port = SharedConfig.SERVER_PORT;
+
         if (args.length > 0) {
             String serverHost = args[0];
             address = InetAddress.getByName(serverHost);
-        } else {
-            address = SharedConfig.SERVER_ADDRESS;
+            if (args.length > 1) {
+                port = Integer.parseInt(args[1]);
+            }
         }
 
-        server = new RemoteServer(address, SharedConfig.SERVER_PORT);
+        server = new RemoteServer(address, port);
 
-        System.out.println("Welcome to Yogurt Cloud. Server: " + address.toString());
+        System.out.println("Welcome to Yogurt Cloud. Server: " + address.toString() + ":" + port);
         System.out.println();
 
         Scanner scanner = new Scanner(System.in);
