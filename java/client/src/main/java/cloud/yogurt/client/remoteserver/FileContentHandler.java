@@ -5,6 +5,7 @@ import cloud.yogurt.shared.header.HeaderIntegerValue;
 import cloud.yogurt.shared.logging.Logger;
 import cloud.yogurt.shared.message.MessageHandler;
 import cloud.yogurt.shared.message.ReceivingMessage;
+import cloud.yogurt.shared.network.Packet;
 import cloud.yogurt.shared.sharedconfig.SharedConfig;
 
 /**
@@ -16,11 +17,13 @@ public class FileContentHandler implements MessageHandler {
     String filename;
     FileCache cache;
     YogurtServer server;
+    boolean isLimited;
 
-    public FileContentHandler(String filename, FileCache cache, YogurtServer server) {
+    public FileContentHandler(String filename, FileCache cache, YogurtServer server, boolean isLimited) {
         this.filename = filename;
         this.cache = cache;
         this.server = server;
+        this.isLimited = isLimited;
     }
 
     /**
@@ -30,14 +33,16 @@ public class FileContentHandler implements MessageHandler {
     @Override
     public void handleMessage(ReceivingMessage receivingMessage) {
         if (receivingMessage.header.getValue("LastModify") != null) {
-            log.info("Handle file content, and update cache.");
-            this.cache.updateCache(filename,
-                    receivingMessage.payload,
-                    ((HeaderIntegerValue)receivingMessage.header.getValue("LastModify")).getValue());
+            if (!this.isLimited) {
+                log.info("Handle file content, and update cache.");
+                this.cache.updateCache(filename,
+                        receivingMessage.payload,
+                        ((HeaderIntegerValue)receivingMessage.header.getValue("LastModify")).getValue());
+            }
             Logger.printRaw(new String(receivingMessage.payload, SharedConfig.CONTENT_CHARSET));
             this.server.releaseServer();
         } else {
-            Logger.printRaw("File does not exist.");
+            Logger.printRaw("File does not exist or illegal arguments.");
             this.server.releaseServer();
         }
     }

@@ -2,6 +2,7 @@ package cloud.yogurt.server.serverhost;
 
 import cloud.yogurt.server.dulplicatefilter.DuplicateFilter;
 import cloud.yogurt.server.filehost.FileHost;
+import cloud.yogurt.server.filehost.FileHostException;
 import cloud.yogurt.server.filehost.FileResolver;
 import cloud.yogurt.shared.header.Header;
 import cloud.yogurt.shared.header.HeaderIntegerValue;
@@ -11,7 +12,6 @@ import cloud.yogurt.shared.message.EmptyDataLoader;
 import cloud.yogurt.shared.message.MessageDataLoader;
 import cloud.yogurt.shared.message.MessageHandler;
 import cloud.yogurt.shared.message.ReceivingMessage;
-import cloud.yogurt.shared.network.EndPoint;
 import cloud.yogurt.shared.network.EndPointCall;
 
 import java.io.FileNotFoundException;
@@ -74,8 +74,22 @@ public class ClientMessageHandler implements MessageHandler {
         switch (action) {
             case "GET": {
                 String path = receivingMessage.header.getParams()[1];
+                boolean withLimit = false;
+                long limit = 0;
+                long offset = 0;
+                if (receivingMessage.header.getValue("Limit") != null) {
+                    limit = ((HeaderIntegerValue)receivingMessage.header.getValue("Limit")).getValue();
+                    offset = ((HeaderIntegerValue)receivingMessage.header.getValue("Offset")).getValue();
+                    withLimit = true;
+                }
                 try {
-                    FileResolver fileResolver = fileHost.get(path);
+                    FileResolver fileResolver;
+                    if (withLimit) {
+                        fileResolver = fileHost.get(path, offset, limit);
+                    } else {
+                        fileResolver = fileHost.get(path);
+                    }
+
                     Header header = new Header(new String[]{"STATUS", "SUCCESS"}, new ArrayList<HeaderRow>(){
                         {
                             {
@@ -85,7 +99,7 @@ public class ClientMessageHandler implements MessageHandler {
                         }
                     });
                     this.respondClient(receivingMessage, header, fileResolver);
-                } catch (FileNotFoundException unused) {
+                } catch (FileNotFoundException | FileHostException unused) {
                     this.respondClientError(receivingMessage);
                 }
                 break;

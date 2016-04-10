@@ -41,12 +41,33 @@ public class YogurtServer {
             } else {
                 // Not cached at all.
                 int callId = makeServiceCall(new GetFileByPath(path));
-                FileContentHandler fileContentHandler = new FileContentHandler(path, fileCache, this);
+                FileContentHandler fileContentHandler = new FileContentHandler(path, fileCache, this, false);
                 server.getMessageHandler().registerHandler(callId, fileContentHandler);
             }
         } else {
             Logger.printRaw(new String(cached, SharedConfig.CONTENT_CHARSET));
             serverBusy = false;
+        }
+    }
+
+
+    public void get(String path, int offset, int limit) {
+        byte[] cached = fileCache.getCache(path, 10);
+        if (cached != null) {
+            log.info("Trying to get " + path + " from cache.");
+            try {
+                byte[] partial = new byte[limit];
+                System.arraycopy(cached, offset, partial, 0, limit);
+                Logger.printRaw(new String(partial, SharedConfig.CONTENT_CHARSET));
+            } catch (java.lang.ArrayIndexOutOfBoundsException ignored) {
+                Logger.printRaw("Illegal parameter.");
+            }
+        } else {
+            log.info("Trying to get " + path + " from server.");
+            serverBusy = true;
+            int callId = makeServiceCall(new GetFileByPath(path, offset, limit));
+            FileContentHandler fileContentHandler = new FileContentHandler(path, fileCache, this, true);
+            server.getMessageHandler().registerHandler(callId, fileContentHandler);
         }
     }
 

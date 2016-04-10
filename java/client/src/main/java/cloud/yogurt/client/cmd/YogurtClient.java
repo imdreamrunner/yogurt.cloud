@@ -67,7 +67,13 @@ public class YogurtClient {
                 }
                 case "get": {
                     String path = components[1];
-                    server.get(path);
+                    if (components.length > 2) {
+                        int offset = Integer.parseInt(components[2]);
+                        int limit = Integer.parseInt(components[3]);
+                        server.get(path, offset, limit);
+                    } else {
+                        server.get(path);
+                    }
                     break;
                 }
                 case "insert": {

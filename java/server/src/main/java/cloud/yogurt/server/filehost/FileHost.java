@@ -27,7 +27,7 @@ public class FileHost {
         return new FileResolver(filename);
     }
 
-    public FileResolver get(String filename, long offset, long limit) throws FileHostException, FileNotFoundException {
+    public FileResolver get(String filename, long offset, long limit) throws FileNotFoundException, FileHostException {
         FileResolver fileResolver = new FileResolver(filename);
         long actualSkipped;
         try {
@@ -38,6 +38,7 @@ public class FileHost {
         if (actualSkipped != offset) {
             throw new FileHostException(101, "Cannot skip file.");
         }
+        fileResolver.setLimit(limit + offset);
         return fileResolver;
     }
 

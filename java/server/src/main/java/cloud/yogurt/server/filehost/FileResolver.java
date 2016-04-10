@@ -13,6 +13,8 @@ import java.io.IOException;
  */
 public class FileResolver extends MessageDataLoader {
 
+    private long hasRead = 0;
+    private long limit = Long.MAX_VALUE;
     private File file;
     private FileInputStream fileInputStream;
 
@@ -21,8 +23,14 @@ public class FileResolver extends MessageDataLoader {
         fileInputStream = new FileInputStream(file);
     }
 
+    public void setLimit(long limit) {
+        this.limit = limit;
+    }
+
     @Override
     public int read() throws IOException {
+        hasRead ++;
+        if (hasRead > limit) return -1;
         return fileInputStream.read();
     }
 }
