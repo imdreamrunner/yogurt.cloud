@@ -3,6 +3,7 @@ package cloud.yogurt.server.serverhost;
 import cloud.yogurt.server.dulplicatefilter.DuplicateFilter;
 import cloud.yogurt.server.filehost.FileHost;
 import cloud.yogurt.server.filehost.FileHostException;
+import cloud.yogurt.server.filehost.ParameterFailedException;
 import cloud.yogurt.server.filehost.FileResolver;
 import cloud.yogurt.shared.header.Header;
 import cloud.yogurt.shared.header.HeaderIntegerValue;
@@ -77,12 +78,16 @@ public class ClientMessageHandler implements MessageHandler {
                 boolean withLimit = false;
                 long limit = 0;
                 long offset = 0;
-                if (receivingMessage.header.getValue("Limit") != null) {
-                    limit = ((HeaderIntegerValue)receivingMessage.header.getValue("Limit")).getValue();
-                    offset = ((HeaderIntegerValue)receivingMessage.header.getValue("Offset")).getValue();
-                    withLimit = true;
-                }
+
                 try {
+                    if (receivingMessage.header.getValue("Limit") != null) {
+                        limit = ((HeaderIntegerValue) receivingMessage.header.getValue("Limit")).getValue();
+                        offset = ((HeaderIntegerValue) receivingMessage.header.getValue("Offset")).getValue();
+                        withLimit = true;
+                    }
+                    if (limit < 0 || offset < 0) {
+                        throw new ParameterFailedException(11, "Illegal Parameter.");
+                    }
                     FileResolver fileResolver;
                     if (withLimit) {
                         fileResolver = fileHost.get(path, offset, limit);
@@ -99,7 +104,7 @@ public class ClientMessageHandler implements MessageHandler {
                         }
                     });
                     this.respondClient(receivingMessage, header, fileResolver);
-                } catch (FileNotFoundException | FileHostException unused) {
+                } catch (FileNotFoundException | FileHostException | ParameterFailedException unused) {
                     this.respondClientError(receivingMessage);
                 }
                 break;
