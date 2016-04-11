@@ -6,4 +6,6 @@ cd ${DIR}/../
 
 ./gradlew client:installApp
 
-./client/build/install/client/bin/client 127.0.0.1 3001
+if [ $? -eq 0 ]; then
+    ./client/build/install/client/bin/client 127.0.0.1 3001
+fi

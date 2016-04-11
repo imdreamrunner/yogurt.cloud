@@ -6,4 +6,6 @@ cd ${DIR}/../
 
 ./gradlew server:installApp
 
-./server/build/install/server/bin/server
+if [ $? -eq 0 ]; then
+    ./server/build/install/server/bin/server
+fi
