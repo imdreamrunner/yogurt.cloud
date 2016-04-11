@@ -63,7 +63,7 @@ public class YogurtServer {
                 byte[] partial = new byte[limit];
                 System.arraycopy(cached, offset, partial, 0, limit);
                 Logger.printRaw(new String(partial, SharedConfig.CONTENT_CHARSET));
-            } catch (java.lang.ArrayIndexOutOfBoundsException ignored) {
+            } catch (Exception ignored) {
                 Logger.printRaw("Illegal parameter.");
             }
         } else {

@@ -1,14 +1,9 @@
 package cloud.yogurt.client.cmd;
 
-import cloud.yogurt.client.filecache.FileCache;
-import cloud.yogurt.client.remoteserver.RemoteServer;
 import cloud.yogurt.client.remoteserver.YogurtServer;
-import cloud.yogurt.client.servicecall.*;
 import cloud.yogurt.shared.logging.Logger;
-import cloud.yogurt.shared.network.PacketException;
 import cloud.yogurt.shared.sharedconfig.SharedConfig;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Scanner;

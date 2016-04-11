@@ -81,7 +81,7 @@ public class Header {
                 String value = keyValuePair[1];
                 HeaderValue headerValue;
                 try {
-                    long intValue = Long.parseUnsignedLong(value);
+                    long intValue = Long.parseLong(value);
                     headerValue = new HeaderIntegerValue(intValue);
                 } catch (NumberFormatException ignored) {
                     headerValue = new HeaderStringValue(value);

@@ -34,4 +34,13 @@ public class HeaderTest {
         rows.add(new HeaderRow("abc", new HeaderIntegerValue(123)));
         header = new Header(params, rows);
     }
+
+    @Test
+    public void test3() {
+        String params[] = {"HEIHEIHEI"};
+        List<HeaderRow> rows = new ArrayList<>();
+        rows.add(new HeaderRow("a", new HeaderStringValue("def")));
+        rows.add(new HeaderRow("b", new HeaderIntegerValue(-123)));
+        header = new Header(params, rows);
+    }
 }
