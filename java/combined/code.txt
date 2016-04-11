@@ -83,15 +83,10 @@ dependencies {
 }==> ./client/src/main/java/cloud/yogurt/client/cmd/YogurtClient.java <==
 package cloud.yogurt.client.cmd;
 
-import cloud.yogurt.client.filecache.FileCache;
-import cloud.yogurt.client.remoteserver.RemoteServer;
 import cloud.yogurt.client.remoteserver.YogurtServer;
-import cloud.yogurt.client.servicecall.*;
 import cloud.yogurt.shared.logging.Logger;
-import cloud.yogurt.shared.network.PacketException;
 import cloud.yogurt.shared.sharedconfig.SharedConfig;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Scanner;
@@ -624,7 +619,7 @@ public class YogurtServer {
                 byte[] partial = new byte[limit];
                 System.arraycopy(cached, offset, partial, 0, limit);
                 Logger.printRaw(new String(partial, SharedConfig.CONTENT_CHARSET));
-            } catch (java.lang.ArrayIndexOutOfBoundsException ignored) {
+            } catch (Exception ignored) {
                 Logger.printRaw("Illegal parameter.");
             }
         } else {
@@ -1148,12 +1143,24 @@ public class FileResolver extends MessageDataLoader {
     }
 }
 
+==> ./server/src/main/java/cloud/yogurt/server/filehost/ParameterFailedException.java <==
+package cloud.yogurt.server.filehost;
+
+import cloud.yogurt.shared.common.YogurtException;
+
+public class ParameterFailedException extends YogurtException {
+    public ParameterFailedException(int error, String message) {
+        super(error, "ParameterFailedException: " + message);
+    }
+}
+
 ==> ./server/src/main/java/cloud/yogurt/server/serverhost/ClientMessageHandler.java <==
 package cloud.yogurt.server.serverhost;
 
 import cloud.yogurt.server.dulplicatefilter.DuplicateFilter;
 import cloud.yogurt.server.filehost.FileHost;
 import cloud.yogurt.server.filehost.FileHostException;
+import cloud.yogurt.server.filehost.ParameterFailedException;
 import cloud.yogurt.server.filehost.FileResolver;
 import cloud.yogurt.shared.header.Header;
 import cloud.yogurt.shared.header.HeaderIntegerValue;
@@ -1228,12 +1235,16 @@ public class ClientMessageHandler implements MessageHandler {
                 boolean withLimit = false;
                 long limit = 0;
                 long offset = 0;
-                if (receivingMessage.header.getValue("Limit") != null) {
-                    limit = ((HeaderIntegerValue)receivingMessage.header.getValue("Limit")).getValue();
-                    offset = ((HeaderIntegerValue)receivingMessage.header.getValue("Offset")).getValue();
-                    withLimit = true;
-                }
+
                 try {
+                    if (receivingMessage.header.getValue("Limit") != null) {
+                        limit = ((HeaderIntegerValue) receivingMessage.header.getValue("Limit")).getValue();
+                        offset = ((HeaderIntegerValue) receivingMessage.header.getValue("Offset")).getValue();
+                        withLimit = true;
+                    }
+                    if (limit < 0 || offset < 0) {
+                        throw new ParameterFailedException(11, "Illegal Parameter.");
+                    }
                     FileResolver fileResolver;
                     if (withLimit) {
                         fileResolver = fileHost.get(path, offset, limit);
@@ -1250,7 +1261,7 @@ public class ClientMessageHandler implements MessageHandler {
                         }
                     });
                     this.respondClient(receivingMessage, header, fileResolver);
-                } catch (FileNotFoundException | FileHostException unused) {
+                } catch (FileNotFoundException | FileHostException | ParameterFailedException unused) {
                     this.respondClientError(receivingMessage);
                 }
                 break;
@@ -1573,7 +1584,7 @@ public class Header {
                 String value = keyValuePair[1];
                 HeaderValue headerValue;
                 try {
-                    long intValue = Long.parseUnsignedLong(value);
+                    long intValue = Long.parseLong(value);
                     headerValue = new HeaderIntegerValue(intValue);
                 } catch (NumberFormatException ignored) {
                     headerValue = new HeaderStringValue(value);
@@ -2702,17 +2713,14 @@ public interface PacketSender {
 ==> ./shared/src/main/java/cloud/yogurt/shared/network/ReceivingBuffer.java <==
 package cloud.yogurt.shared.network;
 
-import java.util.Comparator;
 import java.util.PriorityQueue;
 
 public class ReceivingBuffer {
-    private static Comparator<Packet> packetIdComparator = (left, right) -> {
+    private PriorityQueue<Packet> packets = new PriorityQueue<>((left, right) -> {
         if (left.id > right.id) return 1;
         else if (left.id == right.id) return 0;
         else return -1;
-    };
-
-    private PriorityQueue<Packet> packets = new PriorityQueue<>(packetIdComparator);
+    });
 
     public void add(Packet packet) {
         packets.add(packet);
@@ -2876,6 +2884,15 @@ public class HeaderTest {
         List<HeaderRow> rows = new ArrayList<>();
         rows.add(new HeaderRow("abc", new HeaderStringValue("def")));
         rows.add(new HeaderRow("abc", new HeaderIntegerValue(123)));
+        header = new Header(params, rows);
+    }
+
+    @Test
+    public void test3() {
+        String params[] = {"HEIHEIHEI"};
+        List<HeaderRow> rows = new ArrayList<>();
+        rows.add(new HeaderRow("a", new HeaderStringValue("def")));
+        rows.add(new HeaderRow("b", new HeaderIntegerValue(-123)));
         header = new Header(params, rows);
     }
 }
