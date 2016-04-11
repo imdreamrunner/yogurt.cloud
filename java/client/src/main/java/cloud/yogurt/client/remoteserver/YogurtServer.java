@@ -80,6 +80,7 @@ public class YogurtServer {
         serverBusy = true;
         int callId = makeServiceCall(new InsertFragment(path, offset, fragment));
         server.getMessageHandler().registerHandler(callId, new OperationCallHandler(this));
+        fileCache.timeoutCache(path);
     }
 
     public void monitor(String path, int duration) {
@@ -95,6 +96,7 @@ public class YogurtServer {
         serverBusy = true;
         int callId = makeServiceCall(new DeleteRange(path, offset, length));
         server.getMessageHandler().registerHandler(callId, new OperationCallHandler(this));
+        fileCache.timeoutCache(path);
     }
 
     public void check(String path) {
